@@ -120,6 +120,11 @@ static void gc_debug(const char *format, ...)
 #define gc_debug(...)
 #endif      /* NODEBUG */
 
+extern void *GC_get_memory(void)
+{
+    return GC_MEMORY;
+}
+
 /*
  * GC Prototypes.
  */
