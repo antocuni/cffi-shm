@@ -221,8 +221,14 @@ static void *gc_get_memory(const char* path)
     else {
         flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
         fd = open(path, O_CREAT | O_RDWR, 0660);
-        ftruncate(fd, 0);
-        ftruncate(fd, memsize);
+        if (ftruncate(fd, 0) != 0) {
+            gc_debug("Cannot ftrunctate() to 0");
+            return NULL;
+        }
+        if (ftruncate(fd, memsize) != 0) {
+            gc_debug("Cannot ftruncate() to memsize");
+            return NULL;
+        }
     }
 
     void *ptr = mmap(GC_MEMORY, memsize, PROT_READ | PROT_WRITE, flags, fd, 0);
