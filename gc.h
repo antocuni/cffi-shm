@@ -343,8 +343,12 @@ extern void GC_handle_error(bool fatal, int err);
  * function, otherwise the behavior of the GC is undefined.  This function
  * should also be called early during program execution, ideally from the
  * main() function, so the GC can accurately determine the base of the stack.
+ *
+ * If path is NULL, it will allocate memory using an anonymous mmap. If path
+ * is given, it will allocate a memory-mapped file. Make sure to pass a path
+ * which resides in tmpfs, else it will create an actual file of 3TB!
  */
-extern bool GC_init(void);
+extern bool GC_init(const char* path);
 #define gc_init             GC_init
 
 /*

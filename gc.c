@@ -28,6 +28,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "gc.h"
 
@@ -142,8 +145,12 @@ static inline bool gc_is_marked_index(uint8_t *markptr_0, uint32_t idx);
 #include <windows.h>
 #include <winnt.h>
 
-static void *gc_get_memory(void)
+static void *gc_get_memory(const char* path)
 {
+    if (path != NULL) {
+        gc_debug("path != NULL not supported on windows");
+        return NULL;
+    }
     // Note: Windows (stupidly) assumes that if we are reserving address
     //       space, then there must be enough physical memory to fill that
     //       region.  The work-around is to do lots of small allocates that
@@ -192,15 +199,28 @@ static void *gc_get_stackbottom(void)
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-static void *gc_get_memory(void)
+static void *gc_get_memory(const char* path)
 {
-#ifdef __APPLE__
-    int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_FIXED;
-#else       /* __APPLE__ */
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
-#endif      /* __APPLE__ */
-    void *ptr = mmap(GC_MEMORY, GC_REGION_SIZE*GC_NUM_REGIONS, 
-        PROT_READ | PROT_WRITE, flags, -1, 0);
+    int flags;
+    int fd;
+    size_t memsize = GC_REGION_SIZE*GC_NUM_REGIONS;
+
+    if (path == NULL) {
+#     ifdef __APPLE__
+        flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_FIXED;
+#     else       /* __APPLE__ */
+        flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
+#     endif      /* __APPLE__ */
+        fd = -1;
+    }
+    else {
+        flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
+        fd = open(path, O_CREAT | O_RDWR);
+        ftruncate(fd, 0);
+        ftruncate(fd, memsize);
+    }
+
+    void *ptr = mmap(GC_MEMORY, memsize, PROT_READ | PROT_WRITE, flags, fd, 0);
     return (ptr == MAP_FAILED? NULL: ptr);
 }
 static void *gc_get_mark_memory(size_t size)
@@ -280,7 +300,7 @@ static double gc_reciprocal(uint32_t size)
 /*
  * GC initialization.
  */
-extern bool GC_init(void)
+extern bool GC_init(const char* path)
 {
     if (gc_inited)
         return true;    // Already initialised.
@@ -299,7 +319,7 @@ extern bool GC_init(void)
     gc_stackbottom = gc_get_stackbottom();
     
     // Reserve a large chunk of the virtual address space for the GC.
-    void *gc_memory = gc_get_memory();
+    void *gc_memory = gc_get_memory(path);
     if (gc_memory != GC_MEMORY)
         goto init_error;
 
