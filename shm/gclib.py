@@ -1,8 +1,8 @@
 import py
 import cffi
 
-ROOT = py.path.local(__file__).dirpath('..')
-GCDIR = ROOT.join('GC')
+ROOTDIR = py.path.local(__file__).dirpath('..')
+GCDIR = ROOTDIR.join('GC')
 
 # this is a bit hackish, but we need to use paths which are relative to the
 # root of the package: when we run setup.py install, cffi builds an extension
@@ -12,9 +12,9 @@ GCDIR = ROOT.join('GC')
 # .h and .c files). By using relative paths, the checksum doesn't change and
 # we can safely use the cffi module built during the install.
 #
-# To be more robust, we ensure that the cwd is ROOT.
+# To be more robust, we ensure that the cwd is ROOTDIR.
 
-old_cwd = ROOT.chdir()
+old_cwd = ROOTDIR.chdir()
 
 gcffi = cffi.FFI()
 gcffi.cdef("""
@@ -46,7 +46,7 @@ def new(ffi, t, root=False):
 
 collect = lib.GC_collect
 
-class Roots(object):
+class RootCollection(object):
     """
     For now we allow only a fixed number of roots, up to 512.  In the future,
     we can make it smarter to grow/shrink automatically.
@@ -61,5 +61,5 @@ class Roots(object):
         self.mem[self.n] = ptr
         self.n += 1
 
-roots = Roots()
+roots = RootCollection()
 
