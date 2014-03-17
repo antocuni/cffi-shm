@@ -65,3 +65,11 @@ def test_setitem():
 def test_iter():
     l = List(ffi, 'long', range(5))
     assert list(l) == range(5)
+
+def test_from_pointer():
+    l = List(ffi, 'long', range(5))
+    ptr = ffi.cast('void*', l.lst)
+    l2 = List.from_pointer(ffi, 'long', ptr)
+    assert list(l2) == range(5)
+    l2[0] = 42
+    assert l[0] == 42

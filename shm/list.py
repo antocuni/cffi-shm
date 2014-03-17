@@ -24,6 +24,15 @@ class List(object):
         self.typeditems = ffi.cast(itemtype+'*', self.lst.items)
         self._setcontent(items)
 
+    @classmethod
+    def from_pointer(cls, ffi, itemtype, ptr):
+        self = cls.__new__(cls)
+        self.ffi = ffi
+        self.itemtype = itemtype
+        self.lst = listffi.cast('List*', ptr)
+        self.typeditems = ffi.cast(itemtype+'*', self.lst.items)
+        return self
+
     def _allocate(self, root):
         with gclib.disabled:
             lst = gclib.new(listffi, 'List', root)
