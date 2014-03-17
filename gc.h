@@ -430,6 +430,14 @@ GC_INLINE void GC_free(void *ptr)
 /*
  * GC garbage collection.
  *
+ * Return the total number of GC collections done so far
+ */
+extern long GC_total_collections(void);
+#define gc_total_collections GC_total_collections
+
+/*
+ * GC garbage collection.
+ *
  * Force the GC to do a collection.
  */
 extern void GC_collect(void) __attribute__((__noinline__));

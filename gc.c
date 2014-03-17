@@ -100,6 +100,7 @@ static ssize_t gc_total_size = 0;               // Total size.
 static ssize_t gc_alloc_size = 0;               // Total allocation (since GC).
 static ssize_t gc_trigger_size = GC_MIN_TRIGGER;// GC trigger size.
 static ssize_t gc_used_size  = 0;               // Total used memory.
+static long gc_collections = 0;                 // Number of GC collections done so far
 
 /*
  * GC debugging.
@@ -601,12 +602,18 @@ extern void GC_free_nonnull(void *ptr)
 /*
  * GC collection.
  */
+extern long GC_total_collections()
+{
+    return gc_collections;
+}
+
 extern void GC_collect(void)
 {
     // Is collection enabled?
     if (!gc_enabled)
         return;
 
+    gc_collections++;
     // Initialize marking
     gc_debug("collect [stage=init_marks]");
     gc_mark_init();
