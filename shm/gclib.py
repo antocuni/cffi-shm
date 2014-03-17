@@ -37,8 +37,29 @@ lib = gcffi.verify(
 def init(path):
     lib.GC_init(path)
 
-def new(ffi, t):
+def new(ffi, t, root=False):
     ptr = lib.GC_malloc(ffi.sizeof(t))
-    return ffi.cast(t + "*", ptr)
+    res = ffi.cast(t + "*", ptr)
+    if root:
+        roots.add(res)
+    return res
 
 collect = lib.GC_collect
+
+class Roots(object):
+    """
+    For now we allow only a fixed number of roots, up to 512.  In the future,
+    we can make it smarter to grow/shrink automatically.
+    """
+    def __init__(self):
+        self.n = 0
+        self.maxroots = 512
+        self.mem = gcffi.new('void*[]', self.maxroots)
+        lib.GC_root(self.mem, self.maxroots)
+
+    def add(self, ptr):
+        self.mem[self.n] = ptr
+        self.n += 1
+
+roots = Roots()
+
