@@ -22,6 +22,7 @@ gcffi.cdef("""
     void* GC_get_memory(void);
     void* GC_malloc(size_t size);
     void GC_collect(void);
+    long GC_total_collections(void);
     bool GC_root(void* ptr, size_t size);
     void GC_enable(void);
     void GC_disable(void);
@@ -53,8 +54,8 @@ def new_array(ffi, t, n, root=False):
         roots.add(res)
     return res
 
-
 collect = lib.GC_collect
+total_collections = lib.GC_total_collections
 enable = lib.GC_enable
 disable = lib.GC_disable
 
@@ -74,3 +75,13 @@ class RootCollection(object):
         self.n += 1
 
 roots = RootCollection()
+
+
+class Disabled(object):
+    def __enter__(self):
+        disable()
+
+    def __exit__(self, exctype, excvalue, tb):
+        enable()
+
+disabled = Disabled()

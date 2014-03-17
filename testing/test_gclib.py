@@ -30,3 +30,25 @@ def test_new_array():
     arr = gclib.new_array(ffi, 'Point', 10)
     assert ffi.typeof(arr) is ffi.typeof('Point[10]')
     assert ffi.sizeof(arr) == 10 * ffi.sizeof('Point')
+
+def allocate_many(n=10000):
+    a = gclib.total_collections()
+    for i in range(n):
+        p = gclib.new(ffi, 'Point')
+    b = gclib.total_collections()
+    return a, b
+    
+def test_gc_enabled():
+    # we check that with the GC enabled, after a while it collects and we
+    # start allocating at lower addresses (remember that by default the result
+    # of new() is not a root)
+    a, b = allocate_many()
+    assert b > a
+
+def test_gc_disabled():
+    gclib.collect()
+    with gclib.disabled:
+        a, b = allocate_many()
+        assert a == b
+    a, b = allocate_many()
+    assert b > a
