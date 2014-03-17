@@ -28,14 +28,19 @@ class List(object):
             lst.length = 0
         return lst
 
+    def _grow(self):
+        lst = self.lst
+        lst.size *= 2
+        lst.items = gclib.realloc_array(ffi, self.itemtype, lst.items, lst.size)
+        self.typeditems = ffi.cast(self.itemtype+'*', lst.items)
+
     def append(self, item):
         lst = self.lst
-        if lst.size > lst.length:
-            n = lst.length
-            lst.length = n+1
-            self._setitem(n, item)
-        else:
-            assert False
+        if lst.size <= lst.length:
+            self._grow()
+        n = lst.length
+        lst.length = n+1
+        self._setitem(n, item)
 
     def _setitem(self, n, item):
         self.typeditems[n] = item

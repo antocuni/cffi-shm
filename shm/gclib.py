@@ -21,6 +21,7 @@ gcffi.cdef("""
     bool GC_init(const char* path);
     void* GC_get_memory(void);
     void* GC_malloc(size_t size);
+    void* GC_realloc(void* ptr, size_t size);
     void GC_collect(void);
     long GC_total_collections(void);
     bool GC_root(void* ptr, size_t size);
@@ -55,6 +56,11 @@ def new_array(ffi, t, n, root=False):
     if root:
         roots.add(res)
     return res
+
+def realloc_array(ffi, t, ptr, n):
+    ptr = lib.GC_realloc(ptr, ffi.sizeof(t) * n)
+    return ffi.cast("%s[%d]" % (t, n) , ptr)
+
 
 collect = lib.GC_collect
 total_collections = lib.GC_total_collections
