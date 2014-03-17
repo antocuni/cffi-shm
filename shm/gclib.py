@@ -42,6 +42,8 @@ def init(path):
 
 def new(ffi, t, root=False):
     ptr = lib.GC_malloc(ffi.sizeof(t))
+    if ptr == ffi.NULL:
+        raise MemoryError
     res = ffi.cast(t + "*", ptr)
     if root:
         roots.add(res)
