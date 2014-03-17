@@ -78,4 +78,9 @@ class List(object):
         i = self._getindex(i)
         self.typeditems[i] = item
 
+    def __iter__(self):
+        i = 0
+        while i < self.lst.length:
+            yield self.typeditems[i]
+            i += 1
 

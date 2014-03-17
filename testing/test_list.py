@@ -61,4 +61,7 @@ def test_setitem():
     l[4] = 43
     assert l[0] == 42
     assert l[-1] == 43
-    
+
+def test_iter():
+    l = List(ffi, 'long', range(5))
+    assert list(l) == range(5)
