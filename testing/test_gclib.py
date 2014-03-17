@@ -25,3 +25,8 @@ def test_new_root():
     gclib.collect()
     p2 = gclib.new(ffi, 'Point')
     assert p1 != p2
+
+def test_new_array():
+    arr = gclib.new_array(ffi, 'Point', 10)
+    assert ffi.typeof(arr) is ffi.typeof('Point[10]')
+    assert ffi.sizeof(arr) == 10 * ffi.sizeof('Point')

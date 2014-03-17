@@ -46,6 +46,14 @@ def new(ffi, t, root=False):
         roots.add(res)
     return res
 
+def new_array(ffi, t, n, root=False):
+    ptr = lib.GC_malloc(ffi.sizeof(t) * n)
+    res = ffi.cast("%s[%d]" % (t, n) , ptr)
+    if root:
+        roots.add(res)
+    return res
+
+
 collect = lib.GC_collect
 enable = lib.GC_enable
 disable = lib.GC_disable
@@ -66,4 +74,3 @@ class RootCollection(object):
         self.n += 1
 
 roots = RootCollection()
-
