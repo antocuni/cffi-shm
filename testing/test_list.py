@@ -55,3 +55,10 @@ def test_getitem():
     py.test.raises(IndexError, "l[5]")
     py.test.raises(IndexError, "l[-6]")
     
+def test_setitem():
+    l = List(ffi, 'long', range(5))
+    l[0] = 42
+    l[4] = 43
+    assert l[0] == 42
+    assert l[-1] == 43
+    
