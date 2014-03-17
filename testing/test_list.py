@@ -1,3 +1,4 @@
+import py
 import cffi
 from shm import gclib
 from shm.list import List
@@ -44,3 +45,13 @@ def test_init():
     assert l.typeditems[2] == 2
     assert l.typeditems[3] == 3
     assert l.typeditems[4] == 4
+
+def test_getitem():
+    l = List(ffi, 'long', range(5))
+    assert l[0] == 0
+    assert l[4] == 4
+    assert l[-5] == 0
+    assert l[-1] == 4
+    py.test.raises(IndexError, "l[5]")
+    py.test.raises(IndexError, "l[-6]")
+    

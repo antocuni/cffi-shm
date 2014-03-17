@@ -62,3 +62,11 @@ class List(object):
 
     def __len__(self):
         return self.lst.length
+
+    def __getitem__(self, i):
+        if i < 0:
+            i += self.lst.length
+        if 0 <= i < self.lst.length:
+            return self.typeditems[i]
+        raise IndexError
+
