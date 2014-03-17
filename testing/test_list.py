@@ -30,3 +30,17 @@ def test_growing():
     assert l.typeditems[0] == 42
     assert l.typeditems[1] == 43
     assert l.typeditems[2] == 44
+
+def test_init():
+    l = List(ffi, 'long', [])
+    assert len(l) == 0
+    assert l.lst.size == 2
+    #
+    l = List(ffi, 'long', range(5))
+    assert len(l) == 5
+    assert l.lst.size == 5
+    assert l.typeditems[0] == 0
+    assert l.typeditems[1] == 1
+    assert l.typeditems[2] == 2
+    assert l.typeditems[3] == 3
+    assert l.typeditems[4] == 4
