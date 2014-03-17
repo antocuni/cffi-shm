@@ -23,6 +23,8 @@ gcffi.cdef("""
     void* GC_malloc(size_t size);
     void GC_collect(void);
     bool GC_root(void* ptr, size_t size);
+    void GC_enable(void);
+    void GC_disable(void);
 """)
 
 lib = gcffi.verify(
@@ -45,6 +47,8 @@ def new(ffi, t, root=False):
     return res
 
 collect = lib.GC_collect
+enable = lib.GC_enable
+disable = lib.GC_disable
 
 class RootCollection(object):
     """
