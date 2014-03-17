@@ -1,9 +1,9 @@
 import cffi
 from shm import gclib
 
-ffi = cffi.FFI()
+listffi = cffi.FFI()
 
-ffi.cdef("""
+listffi.cdef("""
     typedef struct {
         void* items;
         long size;   // number of allocated items
@@ -13,17 +13,21 @@ ffi.cdef("""
 
 class List(object):
 
-    def __init__(self, itemtype='void*', root=False):
+    def __init__(self, ffi, itemtype, root=False):
+        """
+        itemtype must be a valid ffi type, such as 'long' or 'void*'
+        """
+        self.ffi = ffi
         self.itemtype = itemtype
         self.lst = self._allocate(root)
         self.typeditems = ffi.cast(itemtype+'*', self.lst.items)
 
     def _allocate(self, root):
         with gclib.disabled:
-            lst = gclib.new(ffi, 'List', root)
+            lst = gclib.new(listffi, 'List', root)
             # even for empty lists, we start by allocating 2 items, and then
             # growing
-            lst.items = gclib.new_array(ffi, self.itemtype, 2)
+            lst.items = gclib.new_array(self.ffi, self.itemtype, 2)
             lst.size = 2
             lst.length = 0
         return lst
@@ -31,8 +35,8 @@ class List(object):
     def _grow(self):
         lst = self.lst
         lst.size *= 2
-        lst.items = gclib.realloc_array(ffi, self.itemtype, lst.items, lst.size)
-        self.typeditems = ffi.cast(self.itemtype+'*', lst.items)
+        lst.items = gclib.realloc_array(self.ffi, self.itemtype, lst.items, lst.size)
+        self.typeditems = self.ffi.cast(self.itemtype+'*', lst.items)
 
     def append(self, item):
         lst = self.lst
