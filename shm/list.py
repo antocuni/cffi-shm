@@ -1,4 +1,5 @@
 import cffi
+import _cffi_backend
 from shm import gclib
 
 listffi = cffi.FFI()
@@ -19,9 +20,9 @@ class List(object):
         """
         self.ffi = ffi
         self.itemtype = itemtype
+        self.itemtype_ptr = _cffi_backend.new_pointer_type(ffi.typeof(itemtype))
         initial_size = 2
         self.lst = self._allocate(root)
-        self.typeditems = ffi.cast(itemtype+'*', self.lst.items)
         self._setcontent(items)
 
     @classmethod
@@ -29,9 +30,13 @@ class List(object):
         self = cls.__new__(cls)
         self.ffi = ffi
         self.itemtype = itemtype
+        self.itemtype_ptr = _cffi_backend.new_pointer_type(ffi.typeof(itemtype))
         self.lst = listffi.cast('List*', ptr)
-        self.typeditems = ffi.cast(itemtype+'*', self.lst.items)
         return self
+
+    @property
+    def typeditems(self):
+        return self.ffi.cast(self.itemtype_ptr, self.lst.items)
 
     def _allocate(self, root):
         with gclib.disabled:
@@ -49,7 +54,6 @@ class List(object):
             return
         lst.items = gclib.realloc_array(self.ffi, self.itemtype, lst.items, newsize)
         lst.size = newsize
-        self.typeditems = self.ffi.cast(self.itemtype+'*', lst.items)
 
     def append(self, item):
         lst = self.lst
