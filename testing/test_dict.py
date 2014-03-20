@@ -43,3 +43,9 @@ def test_strvalue():
     d = Dict(ffi, 'const char*', 'const char*')
     d['hello'] = 'world'
     assert d['hello'] == 'world'
+
+def test_contains():
+    d = Dict(ffi, 'const char*', 'long')
+    assert 'hello' not in d
+    d['hello'] = 42
+    assert 'hello' in d

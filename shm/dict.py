@@ -60,3 +60,7 @@ class Dict(object):
         value = self.valueconverter.from_python(self.ffi, value)
         value = self.ffi.cast('void*', value)
         lib.cfuhash_put(self.d, key, value)
+
+    def __contains__(self, key):
+        key = self.keyconverter.from_python(self.ffi, key)
+        return bool(lib.cfuhash_exists(self.d, key))
