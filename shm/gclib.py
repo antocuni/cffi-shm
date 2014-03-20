@@ -35,8 +35,8 @@ gcffi.cdef("""
     */
     typedef void* (*malloc_fn)(size_t);
     typedef void (*free_fn)(void*);
-    malloc_fn get_GC_malloc();
-    free_fn get_GC_free();
+    malloc_fn get_GC_malloc(void);
+    free_fn get_GC_free(void);
 """)
 
 lib = gcffi.verify(
@@ -45,8 +45,8 @@ lib = gcffi.verify(
 
     typedef void* (*malloc_fn)(size_t);
     typedef void (*free_fn)(void*);
-    malloc_fn get_GC_malloc() { return GC_malloc; }
-    free_fn   get_GC_free()   { return GC_free; }
+    malloc_fn get_GC_malloc(void) { return GC_malloc; }
+    free_fn   get_GC_free(void)   { return GC_free; }
     """,
     sources = ['GC/gc.c'],
     include_dirs = ['GC'],
