@@ -37,6 +37,7 @@ lib = gcffi.verify(
     include_dirs = ['GC'],
     extra_compile_args = ['--std=gnu99'],
 )
+old_cwd.chdir()
 
 def init(path):
     lib.GC_init(path)
