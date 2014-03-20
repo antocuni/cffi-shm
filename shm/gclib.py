@@ -81,7 +81,7 @@ def new_string(s, root=False):
     ptr = lib.GC_malloc(size)
     # XXX: this does one extra copy, because s is copied to a temp buffer to
     # pass to strncpy. I don't know how to avoid it, though
-    lib.strncpy(ptr, s, len(s))
+    lib.strncpy(ptr, s, size)
     if root:
         roots.add(res)
     return gcffi.cast('char*', ptr)
