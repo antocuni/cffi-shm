@@ -31,6 +31,13 @@ def test_new_array():
     assert ffi.typeof(arr) is ffi.typeof('Point[10]')
     assert ffi.sizeof(arr) == 10 * ffi.sizeof('Point')
 
+def test_new_string():
+    ptr = gclib.new_string('hello')
+    assert ptr[0] == 'h'
+    assert ptr[4] == 'o'
+    assert ptr[5] == '\0'
+    assert ffi.string(ptr) == 'hello'
+
 def allocate_many(n=10000):
     a = gclib.total_collections()
     for i in range(n):

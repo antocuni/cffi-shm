@@ -37,10 +37,13 @@ gcffi.cdef("""
     typedef void (*free_fn)(void*);
     malloc_fn get_GC_malloc(void);
     free_fn get_GC_free(void);
+
+    char *strncpy(char *dest, const char *src, size_t n);
 """)
 
 lib = gcffi.verify(
     """
+    #include <string.h>
     #include "gc.h"
 
     typedef void* (*malloc_fn)(size_t);
@@ -72,6 +75,16 @@ def new_array(ffi, t, n, root=False):
     if root:
         roots.add(res)
     return res
+
+def new_string(s, root=False):
+    size = len(s)+1
+    ptr = lib.GC_malloc(size)
+    # XXX: this does one extra copy, because s is copied to a temp buffer to
+    # pass to strncpy. I don't know how to avoid it, though
+    lib.strncpy(ptr, s, len(s))
+    if root:
+        roots.add(res)
+    return gcffi.cast('char*', ptr)
 
 def realloc_array(ffi, t, ptr, n):
     ptr = lib.GC_realloc(ptr, ffi.sizeof(t) * n)
