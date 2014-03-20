@@ -1,6 +1,7 @@
 import py
 import cffi
 from shm import gclib
+from shm.converter import get_converter
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 GCDIR = ROOTDIR.join('GC')
@@ -27,11 +28,9 @@ lib = dictffi.verify(
     """,
     sources = ['shm/libcfu/cfuhash.c'],
     include_dirs = ['shm/libcfu'],
+    #extra_compile_args = ['-g', '-O0'],
 )
 old_cwd.chdir()
-
-def identity(x):
-    return x
 
 class Dict(object):
 
@@ -40,23 +39,24 @@ class Dict(object):
         assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
         self.keytype = keytype
         self.valuetype = valuetype
+        self.keyconverter = get_converter(ffi, keytype)
+        self.valueconverter = get_converter(ffi, valuetype)
         self.d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                                 gclib.lib.get_GC_free())
         if root:
             gclib.roots.add(self.d)
-        if valuetype == 'long':
-            self.convert_to_object = int
-        else:
-            self.convert_to_object = identity
 
 
     def __getitem__(self, key):
+        key = self.keyconverter.from_python(self.ffi, key)
         value = lib.cfuhash_get(self.d, key)
         if value == dictffi.NULL:
             raise KeyError(key)
         value = self.ffi.cast(self.valuetype, value)
-        return self.convert_to_object(value)
+        return self.valueconverter.to_python(self.ffi, value)
 
     def __setitem__(self, key, value):
+        key = self.keyconverter.from_python(self.ffi, key)
+        value = self.valueconverter.from_python(self.ffi, value)
         value = self.ffi.cast('void*', value)
         lib.cfuhash_put(self.d, key, value)

@@ -38,4 +38,8 @@ def test_getsetitem():
     py.test.raises(KeyError, "d['hello']")
     d['hello'] = 42
     assert d['hello'] == 42
-    
+
+def test_strvalue():
+    d = Dict(ffi, 'const char*', 'const char*')
+    d['hello'] = 'world'
+    assert d['hello'] == 'world'
