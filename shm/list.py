@@ -21,7 +21,6 @@ class List(object):
         self.ffi = ffi
         self.itemtype = itemtype
         self.itemtype_ptr = _cffi_backend.new_pointer_type(ffi.typeof(itemtype))
-        initial_size = 2
         self.lst = self._allocate(root)
         self._setcontent(items)
 

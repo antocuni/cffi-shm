@@ -1,7 +1,7 @@
 import py
 import cffi
 from shm import gclib
-from shm.dict import lib
+from shm.dict import lib, Dict
 gclib.init('/run/shm/cffi-shm-testing')
 
 ffi = cffi.FFI()
@@ -31,4 +31,11 @@ def test_libcfu_gc():
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
+    
+
+def test_getsetitem():
+    d = Dict(ffi, 'const char*', 'long')
+    py.test.raises(KeyError, "d['hello']")
+    d['hello'] = 42
+    assert d['hello'] == 42
     
