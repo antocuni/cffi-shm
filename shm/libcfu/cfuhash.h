@@ -49,6 +49,9 @@ typedef struct cfuhash_table cfuhash_table_t;
 /* Prototype for a pointer to a hashing function. */
 typedef unsigned int (*cfuhash_function_t)(const void *key, size_t length);
 
+/* Prototype for a pointer to a malloc function */
+typedef void* (*cfuhash_malloc_fn_t)(size_t size);
+
 /* Prototype for a pointer to a free function. */
 typedef void (*cfuhash_free_fn_t)(void *data);
 
@@ -67,6 +70,10 @@ typedef int (*cfuhash_foreach_fn_t)(void *key, size_t key_size, void *data, size
 
 /* Creates a new hash table. */
 cfuhash_table_t * cfuhash_new(void);
+
+/* Creates a new hash table with the specified malloc/free funtions */
+cfuhash_table_t * cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn, 
+                                             cfuhash_free_fn_t free_fn);
 
 /* Creates a new hash table with the specified size (number of
  *  buckets).

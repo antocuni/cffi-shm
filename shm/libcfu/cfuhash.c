@@ -54,7 +54,6 @@
 
 #include <strings.h>
 
-
 typedef struct cfuhash_event_flags {
 	int resized:1;
 	int pad:31;
@@ -67,6 +66,16 @@ typedef struct cfuhash_entry {
 	size_t data_size;
 	struct cfuhash_entry *next;
 } cfuhash_entry;
+
+/* Note that there are two kinds of "free functions":
+ 
+   - malloc_fn/free_fn are mandatory and are used to allocate the hasttable
+     itself and all the internal structures
+
+   - values_free_fn is optional: if it's specified, the hash table takes the
+     ownership of the values put inside and frees them when they are removed
+*/
+
 
 struct cfuhash_table {
 	libcfu_type type;
@@ -82,7 +91,9 @@ struct cfuhash_table {
 	cfuhash_entry *each_chain_entry;
 	float high;
 	float low;
-	cfuhash_free_fn_t free_fn;
+    cfuhash_malloc_fn_t malloc_fn;
+    cfuhash_free_fn_t free_fn;
+	cfuhash_free_fn_t values_free_fn; /* this is optional */
 	unsigned int resized_count;
 	cfuhash_event_flags event_flags;
 };
@@ -105,6 +116,14 @@ hash_func(const void *key, size_t length) {
 	return hv;
 }
 
+/* like stdlib's calloc, but using our own malloc function */
+static void * cfuhash_calloc(cfuhash_table_t *ht, size_t nmemb, size_t size) {
+    size_t total_size = nmemb*size;
+    void *mem = ht->malloc_fn(total_size);
+    memset(mem, 0, total_size);
+    return mem;
+}
+
 /* makes sure the real size of the buckets array is a power of 2 */
 static unsigned int
 hash_size(unsigned int s) {
@@ -114,15 +133,15 @@ hash_size(unsigned int s) {
 }
 
 static CFU_INLINE void *
-hash_key_dup(const void *key, size_t key_size) {
-	void *new_key = malloc(key_size);
+hash_key_dup(cfuhash_table_t *ht, const void *key, size_t key_size) {
+	void *new_key = ht->malloc_fn(key_size);
 	memcpy(new_key, key, key_size);
 	return new_key;
 }
 
 static CFU_INLINE void *
-hash_key_dup_lower_case(const void *key, size_t key_size) {
-	char *new_key = (char *)hash_key_dup(key, key_size);
+hash_key_dup_lower_case(cfuhash_table_t *ht, const void *key, size_t key_size) {
+	char *new_key = (char *)hash_key_dup(ht, key, key_size);
 	size_t i = 0;
 	for (i = 0; i < key_size; i++) new_key[i] = tolower(new_key[i]);
 	return (void *)new_key;
@@ -135,9 +154,9 @@ hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buc
 
 	if (key) {
 		if (ht->flags & CFUHASH_IGNORE_CASE) {
-			char *lc_key = (char *)hash_key_dup_lower_case(key, key_size);
+			char *lc_key = (char *)hash_key_dup_lower_case(ht, key, key_size);
 			hv = ht->hash_func(lc_key, key_size);
-			free(lc_key);
+			ht->free_fn(lc_key);
 		} else {
 			hv = ht->hash_func(key, key_size);
 		}
@@ -152,18 +171,27 @@ hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buc
 }
 
 static cfuhash_table_t *
-_cfuhash_new(size_t size, unsigned int flags) {
+_cfuhash_new(size_t size, unsigned int flags, cfuhash_malloc_fn_t malloc_fn, 
+             cfuhash_free_fn_t free_fn) {
 	cfuhash_table_t *ht;
 
+    if (malloc_fn == NULL)
+        malloc_fn = malloc;
+    if (free_fn == NULL)
+        free_fn = free;
+
 	size = hash_size(size);
-	ht = malloc(sizeof(cfuhash_table_t));
+	ht = malloc_fn(sizeof(cfuhash_table_t));
 	memset(ht, '\000', sizeof(cfuhash_table_t));
+
+    ht->malloc_fn = malloc_fn;
+    ht->free_fn = free_fn;
 
 	ht->type = libcfu_t_hash_table;
 	ht->num_buckets = size;
 	ht->entries = 0;
 	ht->flags = flags;
-	ht->buckets = calloc(size, sizeof(cfuhash_entry *));
+	ht->buckets = cfuhash_calloc(ht, size, sizeof(cfuhash_entry *));
 
 #ifdef HAVE_PTHREAD_H
 	pthread_mutex_init(&ht->mutex, NULL);
@@ -178,22 +206,28 @@ _cfuhash_new(size_t size, unsigned int flags) {
 
 cfuhash_table_t *
 cfuhash_new(void) {
-	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS);
+	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS, NULL, NULL);
+}
+
+cfuhash_table_t *
+cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn, 
+                           cfuhash_free_fn_t free_fn) {
+	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS, malloc_fn, free_fn);
 }
 
 cfuhash_table_t *
 cfuhash_new_with_initial_size(size_t size) {
 	if (size == 0) size = 8;
-	return _cfuhash_new(size, CFUHASH_FROZEN_UNTIL_GROWS);
+	return _cfuhash_new(size, CFUHASH_FROZEN_UNTIL_GROWS, NULL, NULL);
 }
 
 cfuhash_table_t *
 cfuhash_new_with_flags(unsigned int flags) {
-	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS|flags);
+	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS|flags, NULL, NULL);
 }
 
 cfuhash_table_t * cfuhash_new_with_free_fn(cfuhash_free_fn_t ff) {
-	cfuhash_table_t *ht = _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS);
+	cfuhash_table_t *ht = _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS, NULL, NULL);
 	cfuhash_set_free_function(ht, ff);
 	return ht;
 }
@@ -213,11 +247,11 @@ cfuhash_copy(cfuhash_table_t *src, cfuhash_table_t *dst) {
 		if (cfuhash_get_data(src, (void *)keys[i], key_sizes[i], &val, &data_size)) {
 			cfuhash_put_data(dst, (void *)keys[i], key_sizes[i], val, data_size, NULL);
 		}
-		free(keys[i]);
+		src->free_fn(keys[i]);
 	}
 
-	free(keys);
-	free(key_sizes);
+	src->free_fn(keys);
+	src->free_fn(key_sizes);
 
 	return 1;
 }
@@ -227,7 +261,8 @@ cfuhash_merge(cfuhash_table_t *ht1, cfuhash_table_t *ht2, unsigned int flags) {
 	cfuhash_table_t *new_ht = NULL;
 
 	flags |= CFUHASH_FROZEN_UNTIL_GROWS;
-	new_ht = _cfuhash_new(cfuhash_num_entries(ht1) + cfuhash_num_entries(ht2), flags);
+	new_ht = _cfuhash_new(cfuhash_num_entries(ht1) + cfuhash_num_entries(ht2), flags,
+                          ht1->malloc_fn, ht1->free_fn);
 	if (ht1) cfuhash_copy(ht1, new_ht);
 	if (ht2) cfuhash_copy(ht2, new_ht);
 
@@ -280,7 +315,7 @@ cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf) {
 
 int
 cfuhash_set_free_function(cfuhash_table_t * ht, cfuhash_free_fn_t ff) {
-	if (ff) ht->free_fn = ff;
+	if (ff) ht->values_free_fn = ff;
 	return 0;
 }
 
@@ -334,14 +369,14 @@ hash_cmp(const void *key, size_t key_size, cfuhash_entry *he, unsigned int case_
 static CFU_INLINE cfuhash_entry *
 hash_add_entry(cfuhash_table_t *ht, unsigned int hv, const void *key, size_t key_size,
 	void *data, size_t data_size) {
-	cfuhash_entry *he = calloc(1, sizeof(cfuhash_entry));
+	cfuhash_entry *he = cfuhash_calloc(ht, 1, sizeof(cfuhash_entry));
 
 	assert(hv < ht->num_buckets);
 
 	if (ht->flags & CFUHASH_NOCOPY_KEYS)
 		he->key = (void *)key;
 	else
-		he->key = hash_key_dup(key, key_size);
+		he->key = hash_key_dup(ht, key, key_size);
 	he->key_size = key_size;
 	he->data = data;
 	he->data_size = data_size;
@@ -449,8 +484,8 @@ cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *da
 
 	if (he) {
 		if (r) *r = he->data;
-		if (ht->free_fn) {
-			ht->free_fn(he->data);
+		if (ht->values_free_fn) {
+			ht->values_free_fn(he->data);
 			if (r) *r = NULL; /* don't return a pointer to a free()'d location */
 		}
 		he->data = data;
@@ -495,9 +530,9 @@ cfuhash_clear(cfuhash_table_t *ht) {
 			while (he) {
 				hep = he;
 				he = he->next;
-				if (! (ht->flags & CFUHASH_NOCOPY_KEYS) ) free(hep->key);
-				if (ht->free_fn) ht->free_fn(hep->data);
-				free(hep);
+				if (! (ht->flags & CFUHASH_NOCOPY_KEYS) ) ht->free_fn(hep->key);
+				if (ht->values_free_fn) ht->values_free_fn(hep->data);
+				ht->free_fn(hep);
 			}
 			ht->buckets[i] = NULL;
 		}
@@ -535,12 +570,12 @@ cfuhash_delete_data(cfuhash_table_t *ht, const void *key, size_t key_size) {
 		else ht->buckets[hv] = he->next;
 
 		ht->entries--;
-		if (! (ht->flags & CFUHASH_NOCOPY_KEYS) ) free(he->key);
-		if (ht->free_fn) {
-			ht->free_fn(he->data);
+		if (! (ht->flags & CFUHASH_NOCOPY_KEYS) ) ht->free_fn(he->key);
+		if (ht->values_free_fn) {
+			ht->values_free_fn(he->data);
 			r = NULL; /* don't return a pointer to a free()'d location */
 		}
-		free(he);
+		ht->free_fn(he);
 	}
 
 	unlock_hash(ht);
@@ -576,8 +611,8 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 
 	if (! (ht->flags & CFUHASH_NO_LOCKING) ) lock_hash(ht);
 
-	if (key_sizes) key_lengths = calloc(ht->entries, sizeof(size_t));
-	keys = calloc(ht->entries, sizeof(void *));
+	if (key_sizes) key_lengths = cfuhash_calloc(ht, ht->entries, sizeof(size_t));
+	keys = cfuhash_calloc(ht, ht->entries, sizeof(void *));
 
 	for (bucket = 0; bucket < ht->num_buckets; bucket++) {
 		if ( (he = ht->buckets[bucket]) ) {
@@ -587,7 +622,7 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 				if (fast) {
 					keys[entry_index] = he->key;
 				} else {
-					keys[entry_index] = calloc(he->key_size, 1);
+					keys[entry_index] = cfuhash_calloc(ht, he->key_size, 1);
 					memcpy(keys[entry_index], he->key, he->key_size);
 				}
 				key_count++;
@@ -653,13 +688,13 @@ _cfuhash_destroy_entry(cfuhash_table_t *ht, cfuhash_entry *he, cfuhash_free_fn_t
 	if (ff) {
 		ff(he->data);
 	} else {
-		if (ht->free_fn) ht->free_fn(he->data);
+		if (ht->values_free_fn) ht->values_free_fn(he->data);
 		else {
-			if (ht->flags & CFUHASH_FREE_DATA) free(he->data);
+			if (ht->flags & CFUHASH_FREE_DATA) ht->free_fn(he->data);
 		}
 	}
-	if ( !(ht->flags & CFUHASH_NOCOPY_KEYS) ) free(he->key);
-	free(he);
+	if ( !(ht->flags & CFUHASH_NOCOPY_KEYS) ) ht->free_fn(he->key);
+	ht->free_fn(he);
 }
 
 size_t
@@ -764,12 +799,12 @@ cfuhash_destroy_with_free_fn(cfuhash_table_t *ht, cfuhash_free_fn_t ff) {
 			}
 		}
 	}
-	free(ht->buckets);
+	ht->free_fn(ht->buckets);
 	unlock_hash(ht);
 #ifdef HAVE_PTHREAD_H
 	pthread_mutex_destroy(&ht->mutex);
 #endif
-	free(ht);
+	ht->free_fn(ht);
 
 	return 1;
 }
@@ -822,7 +857,7 @@ cfuhash_rehash(cfuhash_table_t *ht) {
 		unlock_hash(ht);
 		return 0;
 	}
-	new_buckets = calloc(new_size, sizeof(cfuhash_entry *));
+	new_buckets = cfuhash_calloc(ht, new_size, sizeof(cfuhash_entry *));
 
 	for (i = 0; i < ht->num_buckets; i++) {
 		cfuhash_entry *he = ht->buckets[i];
@@ -836,7 +871,7 @@ cfuhash_rehash(cfuhash_table_t *ht) {
 	}
 
 	ht->num_buckets = new_size;
-	free(ht->buckets);
+	ht->free_fn(ht->buckets);
 	ht->buckets = new_buckets;
 	ht->resized_count++;
 

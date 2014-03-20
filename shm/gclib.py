@@ -22,16 +22,31 @@ gcffi.cdef("""
     void* GC_get_memory(void);
     void* GC_malloc(size_t size);
     void* GC_realloc(void* ptr, size_t size);
+    void GC_free(void *ptr);
     void GC_collect(void);
     long GC_total_collections(void);
     bool GC_root(void* ptr, size_t size);
     void GC_enable(void);
     void GC_disable(void);
+
+    /* these are needed because AFAIK there is no other way to get the raw
+       address of the C functions (unless I declare the functions as pointers
+       as suggested by cffi docs, but in that case it's slower to call them)
+    */
+    typedef void* (*malloc_fn)(size_t);
+    typedef void (*free_fn)(void*);
+    malloc_fn get_GC_malloc();
+    free_fn get_GC_free();
 """)
 
 lib = gcffi.verify(
     """
     #include "gc.h"
+
+    typedef void* (*malloc_fn)(size_t);
+    typedef void (*free_fn)(void*);
+    malloc_fn get_GC_malloc() { return GC_malloc; }
+    free_fn   get_GC_free()   { return GC_free; }
     """,
     sources = ['GC/gc.c'],
     include_dirs = ['GC'],
