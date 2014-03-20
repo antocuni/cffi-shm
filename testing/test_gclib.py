@@ -11,6 +11,9 @@ ffi.cdef("""
 """)
 
 def test_new():
+    gclib.roots.reinit()
+    gclib.collect()
+    gclib.collect()
     p1 = gclib.new(ffi, 'Point')
     assert ffi.typeof(p1) is ffi.typeof('Point*')
     gclib.collect()
@@ -20,6 +23,8 @@ def test_new():
     assert p1 == p2
 
 def test_new_root():
+    gclib.roots.reinit()
+    gclib.collect()
     gclib.collect()
     p1 = gclib.new(ffi, 'Point', root=True)
     gclib.collect()

@@ -102,6 +102,9 @@ class RootCollection(object):
     we can make it smarter to grow/shrink automatically.
     """
     def __init__(self):
+        self.reinit()
+
+    def reinit(self):
         self.n = 0
         self.maxroots = 512
         self.mem = gcffi.new('void*[]', self.maxroots)
