@@ -6,6 +6,7 @@ import shm
 from shm import gclib
 from shm.sharedmem import SharedMemory
 from shm.list import List
+from shm.dict import Dict
 
 PATH = '/run/shm/cffi-shm-testing'
 gclib.init(PATH)
@@ -66,9 +67,32 @@ def test_list(tmpdir):
         mem = SharedMemory.open(path, address, size)
         lst = List.from_pointer(ffi, 'long', list_addr)
         assert list(lst) == range(100)
+        mem.close()
 
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
     lst = List(ffi, 'long', range(100), root=True)
     list_addr = int(ffi.cast('long', lst.lst))
     assert exec_child(tmpdir, child, PATH, base_addr, size, list_addr)
+
+
+def test_dict(tmpdir):
+    def child(path, address, size, dict_addr):
+        import cffi
+        from shm.sharedmem import SharedMemory
+        from shm.dict import Dict
+        #
+        ffi = cffi.FFI()
+        mem = SharedMemory.open(path, address, size)
+        d = Dict.from_pointer(ffi, 'const char*', 'long', dict_addr)
+        assert d['hello'] == 1
+        assert d['world'] == 2
+        mem.close()
+
+    base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
+    size = gclib.lib.GC_get_memsize()
+    d = Dict(ffi, 'const char*', 'long', root=True)
+    d['hello'] = 1
+    d['world'] = 2
+    dict_addr = int(ffi.cast('long', d.d))
+    assert exec_child(tmpdir, child, PATH, base_addr, size, dict_addr)

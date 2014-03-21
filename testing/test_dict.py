@@ -73,4 +73,3 @@ def test_from_pointer():
     d2 = Dict.from_pointer(ffi, 'const char*', 'long', ptr)
     assert d2['hello'] == 1
     assert d2['world'] == 2
-    
