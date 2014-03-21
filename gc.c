@@ -126,6 +126,11 @@ extern void *GC_get_memory(void)
     return GC_MEMORY;
 }
 
+extern size_t GC_get_memsize(void)
+{
+    return GC_REGION_SIZE*GC_NUM_REGIONS;
+}
+
 /*
  * GC Prototypes.
  */
@@ -162,7 +167,8 @@ static void *gc_get_memory(const char* path)
     //       region.  The work-around is to do lots of small allocates that
     //       do not violate this assumption.
     size_t increment = 256 * 1048576;   // 256Mb
-    for (size_t i = 0; i < GC_REGION_SIZE*GC_NUM_REGIONS; i += increment)
+    size_t memsize = GC_get_memsize()
+    for (size_t i = 0; i < memsize; i += increment)
     {
         void *addr;
         if ((addr = VirtualAlloc(GC_MEMORY + i, increment, MEM_RESERVE,
@@ -209,7 +215,7 @@ static void *gc_get_memory(const char* path)
 {
     int flags;
     int fd;
-    size_t memsize = GC_REGION_SIZE*GC_NUM_REGIONS;
+    size_t memsize = GC_get_memsize();
 
     if (path == NULL) {
 #     ifdef __APPLE__

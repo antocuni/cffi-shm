@@ -123,6 +123,7 @@ typedef struct gc_region_s *gc_region_t;
 extern struct gc_region_s __gc_regions[GC_NUM_REGIONS];
 
 extern void *GC_get_memory(void);
+extern size_t GC_get_memsize(void);
 
 /*
  * GC hide pointer.
