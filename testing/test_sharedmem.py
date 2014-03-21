@@ -5,6 +5,7 @@ import cffi
 import shm
 from shm import gclib
 from shm.sharedmem import SharedMemory
+from shm.list import List
 
 PATH = '/run/shm/cffi-shm-testing'
 gclib.init(PATH)
@@ -53,3 +54,21 @@ def test_sharedmem(tmpdir):
     rawstr = gclib.new_string('hello world', root=True)
     str_addr = int(ffi.cast('long', rawstr))
     assert exec_child(tmpdir, child, PATH, base_addr, size, str_addr)
+
+
+def test_list(tmpdir):
+    def child(path, address, size, list_addr):
+        import cffi
+        from shm.sharedmem import SharedMemory
+        from shm.list import List
+        #
+        ffi = cffi.FFI()
+        mem = SharedMemory.open(path, address, size)
+        lst = List.from_pointer(ffi, 'long', list_addr)
+        assert list(lst) == range(100)
+
+    base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
+    size = gclib.lib.GC_get_memsize()
+    lst = List(ffi, 'long', range(100), root=True)
+    list_addr = int(ffi.cast('long', lst.lst))
+    assert exec_child(tmpdir, child, PATH, base_addr, size, list_addr)
