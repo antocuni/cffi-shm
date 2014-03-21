@@ -10,6 +10,11 @@ ffi.cdef("""
     } Point;
 """)
 
+def test_gc_memory():
+    gb = 1024**3
+    assert gclib.lib.GC_get_memory() == ffi.cast('void*', 0x1000000000)
+    assert gclib.lib.GC_get_memsize() == 4*gb * 768
+
 def test_new():
     gclib.roots.reinit()
     gclib.collect()

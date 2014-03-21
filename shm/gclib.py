@@ -20,6 +20,7 @@ gcffi = cffi.FFI()
 gcffi.cdef("""
     bool GC_init(const char* path);
     void* GC_get_memory(void);
+    size_t GC_get_memsize(void);
     void* GC_malloc(size_t size);
     void* GC_realloc(void* ptr, size_t size);
     void GC_free(void *ptr);
