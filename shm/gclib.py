@@ -53,7 +53,7 @@ lib = gcffi.verify(
     """,
     sources = ['GC/gc.c'],
     include_dirs = ['GC'],
-    extra_compile_args = ['--std=gnu99'],
+    extra_compile_args = ['--std=gnu99'] #, '-g', '-O0'],
 )
 old_cwd.chdir()
 
