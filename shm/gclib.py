@@ -84,7 +84,7 @@ def new_string(s, root=False):
     # pass to strncpy. I don't know how to avoid it, though
     lib.strncpy(ptr, s, size)
     if root:
-        roots.add(res)
+        roots.add(ptr)
     return gcffi.cast('char*', ptr)
 
 def realloc_array(ffi, t, ptr, n):
