@@ -23,6 +23,7 @@ dictffi.cdef("""
     void * cfuhash_get(cfuhash_table_t *ht, const char *key);
     int cfuhash_exists(cfuhash_table_t *ht, const char *key);
     void * cfuhash_put(cfuhash_table_t *ht, const char *key, void *data);
+    void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
     unsigned int cfuhash_get_flags(cfuhash_table_t *ht);
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
@@ -83,3 +84,13 @@ class Dict(object):
         except KeyError:
             return default
 
+    def keys(self):
+        sizeptr = dictffi.new('size_t[1]')
+        keys_array = lib.cfuhash_keys(self.d, sizeptr, True)
+        size = sizeptr[0]
+        keys = []
+        for i in range(size):
+            key = keys_array[i]
+            key = self.keyconverter.to_python(self.ffi, key)
+            keys.append(key)
+        return keys

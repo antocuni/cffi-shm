@@ -56,3 +56,11 @@ def test_get():
     assert d.get('hello', 123) == 123
     d['hello'] = 42
     assert d.get('hello') == 42
+
+def test_keys():
+    d = Dict(ffi, 'const char*', 'long')
+    d['foo'] = 1
+    d['bar'] = 2
+    d['baz'] = 3
+    keys = d.keys()
+    assert sorted(keys) == ['bar', 'baz', 'foo']

@@ -14,6 +14,7 @@ class DummyConverter(object):
 class StrConverter(object):
     @staticmethod
     def to_python(ffi, cdata):
+        cdata = ffi.cast('char*', cdata)
         return ffi.string(cdata)
 
     @staticmethod
