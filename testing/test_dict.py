@@ -49,3 +49,10 @@ def test_contains():
     assert 'hello' not in d
     d['hello'] = 42
     assert 'hello' in d
+
+def test_get():
+    d = Dict(ffi, 'const char*', 'long')
+    assert d.get('hello') is None
+    assert d.get('hello', 123) == 123
+    d['hello'] = 42
+    assert d.get('hello') == 42

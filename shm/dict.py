@@ -76,3 +76,10 @@ class Dict(object):
     def __contains__(self, key):
         key = self._key(key)
         return bool(lib.cfuhash_exists(self.d, key))
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
