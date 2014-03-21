@@ -64,3 +64,13 @@ def test_keys():
     d['baz'] = 3
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
+
+def test_from_pointer():
+    d = Dict(ffi, 'const char*', 'long', root=True)
+    d['hello'] = 1
+    d['world'] = 2
+    ptr = ffi.cast('void*', d.d)
+    d2 = Dict.from_pointer(ffi, 'const char*', 'long', ptr)
+    assert d2['hello'] == 1
+    assert d2['world'] == 2
+    

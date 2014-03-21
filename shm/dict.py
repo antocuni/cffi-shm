@@ -54,6 +54,18 @@ class Dict(object):
         if root:
             gclib.roots.add(self.d)
 
+    @classmethod
+    def from_pointer(cls, ffi, keytype, valuetype, ptr):
+        self = cls.__new__(cls)
+        self.ffi = ffi
+        assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
+        self.keytype = keytype
+        self.valuetype = valuetype
+        self.keyconverter = get_converter(ffi, keytype)
+        self.valueconverter = get_converter(ffi, valuetype)
+        self.d = dictffi.cast('cfuhash_table_t*', ptr)
+        return self
+
     def _key(self, key):
         # there is no need to explicitly allocate a GC string, because the hastable
         # already does a copy internally, using the provided GC_malloc
