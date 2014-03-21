@@ -116,6 +116,19 @@ hash_func(const void *key, size_t length) {
 	return hv;
 }
 
+/* Call the hash function associated to the ht. In case it's NULL, it calls
+   the default hash_func.  We cannot simply store hash_func as the default
+   value because in case we share the memory between two processes, we get two
+   different address spaces.
+*/
+static call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
+    if (ht->hash_func == NULL)
+        return hash_func(key, length);
+    else
+        return ht->hash_func(key, length);
+}
+
+
 /* like stdlib's calloc, but using our own malloc function */
 static void * cfuhash_calloc(cfuhash_table_t *ht, size_t nmemb, size_t size) {
     size_t total_size = nmemb*size;
@@ -155,10 +168,10 @@ hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buc
 	if (key) {
 		if (ht->flags & CFUHASH_IGNORE_CASE) {
 			char *lc_key = (char *)hash_key_dup_lower_case(ht, key, key_size);
-			hv = ht->hash_func(lc_key, key_size);
+			hv = call_hash_func(ht, lc_key, key_size);
 			ht->free_fn(lc_key);
 		} else {
-			hv = ht->hash_func(key, key_size);
+			hv = call_hash_func(ht, key, key_size);
 		}
 	}
 
@@ -197,7 +210,7 @@ _cfuhash_new(size_t size, unsigned int flags, cfuhash_malloc_fn_t malloc_fn,
 	pthread_mutex_init(&ht->mutex, NULL);
 #endif
 
-	ht->hash_func = hash_func;
+	ht->hash_func = NULL;
 	ht->high = 0.75;
 	ht->low = 0.25;
 
@@ -309,7 +322,7 @@ cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf) {
 	/* can't allow changing the hash function if the hash already contains entries */
 	if (ht->entries) return -1;
 
-	ht->hash_func = hf ? hf : hash_func;
+	ht->hash_func = hf;
 	return 0;
 }
 
