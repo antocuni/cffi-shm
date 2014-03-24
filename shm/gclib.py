@@ -30,9 +30,10 @@ gcffi.cdef("""
     void GC_enable(void);
     void GC_disable(void);
 
-    /* these are needed because AFAIK there is no other way to get the raw
-       address of the C functions (unless I declare the functions as pointers
-       as suggested by cffi docs, but in that case it's slower to call them)
+    /* The CFFI docs suggest to declare GC_malloc_noinline and
+       GC_free_noinline as function pointers. However, it seems we get an
+       address which is different than the actual one of the functions inside
+       the library. Use this hack instead.
     */
     typedef void* (*malloc_fn)(size_t);
     typedef void (*free_fn)(void*);
@@ -42,6 +43,8 @@ gcffi.cdef("""
     char *strncpy(char *dest, const char *src, size_t n);
 """)
 
+## import distutils.log
+## distutils.log.set_verbosity(1)
 lib = gcffi.verify(
     """
     #include <string.h>
@@ -49,14 +52,27 @@ lib = gcffi.verify(
 
     typedef void* (*malloc_fn)(size_t);
     typedef void (*free_fn)(void*);
-    malloc_fn get_GC_malloc(void) { return GC_malloc; }
-    free_fn   get_GC_free(void)   { return GC_free; }
+    malloc_fn get_GC_malloc(void) { return GC_malloc_noinline; }
+    free_fn   get_GC_free(void)   { return GC_free_noinline; }
     """,
-    sources = ['GC/gc.c'],
     include_dirs = ['GC'],
-    extra_compile_args = ['--std=gnu99'] #, '-g', '-O0'],
+    #extra_compile_args = ['-g', '-O0'],
+    extra_link_args = ['-Wl,-rpath,GC', '-LGC', '-lshmgc',],
 )
 old_cwd.chdir()
+
+def sanity_check():
+    # check that GC_malloc()&co. are placed immediately after the GC data
+    gc_area_start = int(gcffi.cast('long', lib.GC_get_memory()))
+    gc_area_end = gc_area_start + lib.GC_get_memsize()
+    GC_malloc_addr = int(gcffi.cast('long', lib.get_GC_malloc()))
+    offset = GC_malloc_addr - gc_area_end
+    # if the offset is >1MB, it probably means that the lib was placed
+    # somewhere else
+    assert 0 < offset < 1024**2, 'The GC library does not seem to be at the proper location in memory. Check the linker script.'
+
+sanity_check()
+
 
 def init(path):
     lib.GC_init(path)
