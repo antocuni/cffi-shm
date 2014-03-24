@@ -494,6 +494,19 @@ static inline void gc_maybe_collect(uint32_t size)
     }
 }
 
+/* non inlined versions of GC_malloc/GC_free: they are needed to get an
+ * absolute pointer in the address space of libshmgc.so, else we get a pointer
+ * in the address space of the caller
+ */
+extern void *GC_malloc_noinline(size_t size)
+{
+    return GC_malloc(size);
+}
+
+extern void GC_free_noinline(void *ptr) {
+    GC_free(ptr);
+}
+
 /*
  * GC memory allocation.
  */

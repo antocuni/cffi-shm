@@ -384,6 +384,7 @@ extern bool GC_dynamic_root(void **ptrptr, size_t *sizeptr, size_t elemsize);
  * gc_malloc() is aligned to an address that is a multiple of GC_ALIGNMENT.
  */
 extern void *GC_malloc_index(size_t idx) __attribute__((__malloc__));
+extern void *GC_malloc_noinline(size_t size) __attribute__((__malloc__));
 GC_INLINE void *GC_malloc(size_t size)
 {
     // Most of the time 'size' is a constant.  By in-lining, the size->index
@@ -420,6 +421,7 @@ extern void *GC_realloc(void *ptr, size_t size);
  * This is the GC's replacement of stdlib free().  Using gc_free() is optional.
  */
 extern void GC_free_nonnull(void *ptr) __attribute__((__nonnull__(1)));
+extern void GC_free_noinline(void *ptr);
 GC_INLINE void GC_free(void *ptr)
 {
     if (ptr == NULL)
