@@ -75,6 +75,9 @@ sanity_check()
 
 
 def init(path):
+    shm_dir = py.path.local(path).dirpath()
+    if shm_dir.check(exists=False):
+        raise OSError('The directory %s does not seem to exist' % shm_dir)
     lib.GC_init(path)
 
 def new(ffi, t, root=False):
