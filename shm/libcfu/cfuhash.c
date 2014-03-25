@@ -133,6 +133,8 @@ static call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
 static void * cfuhash_calloc(cfuhash_table_t *ht, size_t nmemb, size_t size) {
     size_t total_size = nmemb*size;
     void *mem = ht->malloc_fn(total_size);
+    if (!mem)
+        return NULL;
     memset(mem, 0, total_size);
     return mem;
 }
@@ -617,7 +619,8 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 	size_t key_count = 0;
 
 	if (!ht) {
-		*key_sizes = NULL;
+        if (key_sizes)
+            *key_sizes = NULL;
 		*num_keys = 0;
 		return NULL;
 	}
@@ -626,6 +629,11 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 
 	if (key_sizes) key_lengths = cfuhash_calloc(ht, ht->entries, sizeof(size_t));
 	keys = cfuhash_calloc(ht, ht->entries, sizeof(void *));
+    if (!keys) {
+        key_lengths = NULL;
+        key_count = 0;
+        goto exit;
+    }
 
 	for (bucket = 0; bucket < ht->num_buckets; bucket++) {
 		if ( (he = ht->buckets[bucket]) ) {
@@ -645,6 +653,7 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 		}
 	}
 
+ exit:
 	if (! (ht->flags & CFUHASH_NO_LOCKING) ) unlock_hash(ht);
 
 	if (key_sizes) *key_sizes = key_lengths;

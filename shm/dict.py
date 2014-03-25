@@ -99,6 +99,8 @@ class Dict(object):
     def keys(self):
         sizeptr = dictffi.new('size_t[1]')
         keys_array = lib.cfuhash_keys(self.d, sizeptr, True)
+        if keys_array == dictffi.NULL:
+            raise MemoryError
         size = sizeptr[0]
         keys = []
         for i in range(size):
