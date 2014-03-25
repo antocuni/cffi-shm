@@ -228,12 +228,16 @@ static void *gc_get_memory(const char* path)
     else {
         flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
         fd = open(path, O_CREAT | O_RDWR, 0660);
+        if (fd == -1) {
+            gc_debug("Cannot open %s: %s", path, strerror(errno));
+            return NULL;
+        }
         if (ftruncate(fd, 0) != 0) {
-            gc_debug("Cannot ftrunctate() to 0");
+            gc_debug("Cannot ftrunctate() to 0: %s", strerror(errno));
             return NULL;
         }
         if (ftruncate(fd, memsize) != 0) {
-            gc_debug("Cannot ftruncate() to memsize");
+            gc_debug("Cannot ftruncate() to memsize: %s", strerror(errno));
             return NULL;
         }
     }
