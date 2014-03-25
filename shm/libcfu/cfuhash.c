@@ -121,7 +121,7 @@ hash_func(const void *key, size_t length) {
    value because in case we share the memory between two processes, we get two
    different address spaces.
 */
-static call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
+static unsigned int call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
     if (ht->hash_func == NULL)
         return hash_func(key, length);
     else
@@ -627,8 +627,8 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 
 	if (! (ht->flags & CFUHASH_NO_LOCKING) ) lock_hash(ht);
 
-	if (key_sizes) key_lengths = cfuhash_calloc(ht, ht->entries, sizeof(size_t));
-	keys = cfuhash_calloc(ht, ht->entries, sizeof(void *));
+	if (key_sizes) key_lengths = calloc(ht->entries, sizeof(size_t));
+	keys = calloc(ht->entries, sizeof(void *));
     if (!keys) {
         key_lengths = NULL;
         key_count = 0;
@@ -643,7 +643,7 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 				if (fast) {
 					keys[entry_index] = he->key;
 				} else {
-					keys[entry_index] = cfuhash_calloc(ht, he->key_size, 1);
+					keys[entry_index] = calloc(he->key_size, 1);
 					memcpy(keys[entry_index], he->key, he->key_size);
 				}
 				key_count++;
