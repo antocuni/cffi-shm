@@ -1,7 +1,7 @@
 import py
 import cffi
 from shm import gclib
-from shm.dict import lib, Dict
+from shm.dict import lib, DictType
 gclib.init('/run/shm/cffi-shm-testing')
 
 ffi = cffi.FFI()
@@ -34,32 +34,42 @@ def test_libcfu_gc():
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
 
+def test_DictType():
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    assert repr(DT) == '<shm type dict [const char*: long]>'
+
 def test_getsetitem():
-    d = Dict(ffi, 'const char*', 'long')
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    d = DT()
+    import pdb;pdb.set_trace()
     py.test.raises(KeyError, "d['hello']")
     d['hello'] = 42
     assert d['hello'] == 42
 
 def test_strvalue():
-    d = Dict(ffi, 'const char*', 'const char*')
+    DT = DictType(ffi, 'const char*', ffi, 'const char*')
+    d = DT()
     d['hello'] = 'world'
     assert d['hello'] == 'world'
 
 def test_contains():
-    d = Dict(ffi, 'const char*', 'long')
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    d = DT()
     assert 'hello' not in d
     d['hello'] = 42
     assert 'hello' in d
 
 def test_get():
-    d = Dict(ffi, 'const char*', 'long')
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    d = DT()
     assert d.get('hello') is None
     assert d.get('hello', 123) == 123
     d['hello'] = 42
     assert d.get('hello') == 42
 
 def test_keys():
-    d = Dict(ffi, 'const char*', 'long')
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    d = DT()
     d['foo'] = 1
     d['bar'] = 2
     d['baz'] = 3
@@ -67,10 +77,12 @@ def test_keys():
     assert sorted(keys) == ['bar', 'baz', 'foo']
 
 def test_from_pointer():
-    d = Dict(ffi, 'const char*', 'long', root=True)
+    DT = DictType(ffi, 'const char*', ffi, 'long')
+    d = DT(root=True)
     d['hello'] = 1
     d['world'] = 2
-    ptr = ffi.cast('void*', d.d)
-    d2 = Dict.from_pointer(ffi, 'const char*', 'long', ptr)
+    ptr = ffi.cast('void*', d.ht)
+    #
+    d2 = DT.from_pointer(ptr)
     assert d2['hello'] == 1
     assert d2['world'] == 2

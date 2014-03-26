@@ -47,57 +47,63 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
-class Dict(object):
-
-    def __init__(self, ffi, keytype, valuetype, root=False):
-        d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
-                                           gclib.lib.get_GC_free())
-        if root:
-            gclib.roots.add(d)
-        self._init(ffi, keytype, valuetype, d)
-
-    @classmethod
-    def from_pointer(cls, ffi, keytype, valuetype, ptr):
-        self = cls.__new__(cls)
-        d = dictffi.cast('cfuhash_table_t*', ptr)
-        self._init(ffi, keytype, valuetype, d)
-        return self
-
-    def _init(self, ffi, keytype, valuetype, d):
-        self.ffi = ffi
+class DictType(object):
+    def __init__(self, keyffi, keytype, valueffi, valuetype):
         assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
+        self.keyffi = keyffi
         self.keytype = keytype
-        self.keysize = dictffi.cast('size_t', -1)
+        self.keysize = keyffi.cast('size_t', -1)
+        self.valueffi = valueffi
         self.valuetype = valuetype
-        self.keyconverter = get_converter(ffi, keytype)
-        self.valueconverter = get_converter(ffi, valuetype)
-        self.retvalue = self.ffi.new('void*[1]') # passed to cfuhash_get_data
-        self.d = d
+        self.keyconverter = get_converter(keyffi, keytype)
+        self.valueconverter = get_converter(valueffi, valuetype)
 
-    def _key(self, key):
-        # there is no need to explicitly allocate a GC string, because the hastable
-        # already does a copy internally, using the provided GC_malloc
-        #key = self.keyconverter.from_python(self.ffi, key)
-        return key
+    def __repr__(self):
+        return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
+
+    def __call__(self, root=False):
+        ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
+                                             gclib.lib.get_GC_free())
+        if root:
+            gclib.roots.add(ptr)
+        return DictInstance(self, ptr)
+
+    def from_pointer(self, ptr):
+        ptr = dictffi.cast('cfuhash_table_t*', ptr)
+        return DictInstance(self, ptr)
+
+class DictInstance(object):
+
+    def __init__(self, dictype, ht):
+        self.dictype = dictype
+        self.ht = ht
+        self.retbuffer = dictffi.new('void*[1]') # passed to cfuhash_get_data
+
+    def __repr__(self):
+        addr = int(dictffi.cast('long', self.ht))
+        return '<shm dict [%s: %s] at 0x%x>' % (self.dictype.keytype,
+                                                self.dictype.valuetype,
+                                                addr)
 
     def __getitem__(self, key):
-        key = self._key(key)
-        ret = lib.cfuhash_get_data(self.d, key, self.keysize, self.retvalue, self.ffi.NULL)
+        t = self.dictype
+        ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
+                                   self.retbuffer, dictffi.NULL)
         if ret == 0:
             raise KeyError(key)
-        value = self.retvalue[0]
-        value = self.ffi.cast(self.valuetype, value)
-        return self.valueconverter.to_python(self.ffi, value)
+        value = self.retbuffer[0]
+        value = t.valueffi.cast(t.valuetype, value)
+        return t.valueconverter.to_python(t.valueffi, value)
 
     def __setitem__(self, key, value):
-        key = self._key(key)
-        value = self.valueconverter.from_python(self.ffi, value)
-        value = self.ffi.cast('void*', value)
-        lib.cfuhash_put_data(self.d, key, self.keysize, value, 0, self.ffi.NULL)
+        t = self.dictype
+        value = t.valueconverter.from_python(t.valueffi, value)
+        value = t.valueffi.cast('void*', value)
+        lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)
 
     def __contains__(self, key):
-        key = self._key(key)
-        return bool(lib.cfuhash_exists_data(self.d, key, self.keysize))
+        t = self.dictype
+        return bool(lib.cfuhash_exists_data(self.ht, key, t.keysize))
 
     def get(self, key, default=None):
         try:
@@ -106,8 +112,9 @@ class Dict(object):
             return default
 
     def keys(self):
+        t = self.dictype
         sizeptr = dictffi.new('size_t[1]')
-        keys_array = lib.cfuhash_keys(self.d, sizeptr, True)
+        keys_array = lib.cfuhash_keys(self.ht, sizeptr, True)
         if keys_array == dictffi.NULL:
             raise MemoryError
         try:
@@ -115,7 +122,7 @@ class Dict(object):
             keys = []
             for i in range(size):
                 key = keys_array[i]
-                key = self.keyconverter.to_python(self.ffi, key)
+                key = t.keyconverter.to_python(t.keyffi, key)
                 keys.append(key)
             return keys
         finally:
