@@ -48,21 +48,20 @@ old_cwd.chdir()
 class Dict(object):
 
     def __init__(self, ffi, keytype, valuetype, root=False):
-        self.ffi = ffi
-        assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
-        self.keytype = keytype
-        self.keysize = dictffi.cast('size_t', -1)
-        self.valuetype = valuetype
-        self.keyconverter = get_converter(ffi, keytype)
-        self.valueconverter = get_converter(ffi, valuetype)
-        self.d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
-                                                gclib.lib.get_GC_free())
+        d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
+                                           gclib.lib.get_GC_free())
         if root:
-            gclib.roots.add(self.d)
+            gclib.roots.add(d)
+        self._init(ffi, keytype, valuetype, d)
 
     @classmethod
     def from_pointer(cls, ffi, keytype, valuetype, ptr):
         self = cls.__new__(cls)
+        d = dictffi.cast('cfuhash_table_t*', ptr)
+        self._init(ffi, keytype, valuetype, d)
+        return self
+
+    def _init(self, ffi, keytype, valuetype, d):
         self.ffi = ffi
         assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
         self.keytype = keytype
@@ -70,8 +69,7 @@ class Dict(object):
         self.valuetype = valuetype
         self.keyconverter = get_converter(ffi, keytype)
         self.valueconverter = get_converter(ffi, valuetype)
-        self.d = dictffi.cast('cfuhash_table_t*', ptr)
-        return self
+        self.d = d
 
     def _key(self, key):
         # there is no need to explicitly allocate a GC string, because the hastable
