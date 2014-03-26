@@ -8,7 +8,8 @@ ffi = cffi.FFI()
 
 def check_dict(d):
     assert not lib.cfuhash_exists(d, "hello")
-    lib.cfuhash_put(d, "hello", ffi.cast('void*', 42))
+    lib.cfuhash_put_data(d, "hello", ffi.cast('size_t', -1),
+                         ffi.cast('void*', 42), 0, ffi.NULL)
     assert lib.cfuhash_exists(d, "hello")
     value = lib.cfuhash_get(d, "hello")
     assert int(ffi.cast("long", value)) == 42

@@ -22,8 +22,10 @@ dictffi.cdef("""
     int cfuhash_destroy(cfuhash_table_t *ht);
     void * cfuhash_get(cfuhash_table_t *ht, const char *key);
     int cfuhash_exists(cfuhash_table_t *ht, const char *key);
-    void * cfuhash_put(cfuhash_table_t *ht, const char *key, void *data);
     void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
+
+    int cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *data,
+	                 size_t data_size, void **r);
 
     unsigned int cfuhash_get_flags(cfuhash_table_t *ht);
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
@@ -49,6 +51,7 @@ class Dict(object):
         self.ffi = ffi
         assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
         self.keytype = keytype
+        self.keysize = dictffi.cast('size_t', -1)
         self.valuetype = valuetype
         self.keyconverter = get_converter(ffi, keytype)
         self.valueconverter = get_converter(ffi, valuetype)
@@ -63,6 +66,7 @@ class Dict(object):
         self.ffi = ffi
         assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
         self.keytype = keytype
+        self.keysize = dictffi.cast('size_t', -1)
         self.valuetype = valuetype
         self.keyconverter = get_converter(ffi, keytype)
         self.valueconverter = get_converter(ffi, valuetype)
@@ -87,7 +91,7 @@ class Dict(object):
         key = self._key(key)
         value = self.valueconverter.from_python(self.ffi, value)
         value = self.ffi.cast('void*', value)
-        lib.cfuhash_put(self.d, key, value)
+        lib.cfuhash_put_data(self.d, key, self.keysize, value, 0, self.ffi.NULL)
 
     def __contains__(self, key):
         key = self._key(key)
