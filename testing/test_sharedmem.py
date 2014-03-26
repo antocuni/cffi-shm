@@ -87,6 +87,7 @@ def test_dict(tmpdir):
         d = Dict.from_pointer(ffi, 'const char*', 'long', dict_addr)
         assert d['hello'] == 1
         assert d['world'] == 2
+        assert sorted(d.keys()) == ['hello', 'world']
         mem.close()
 
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
