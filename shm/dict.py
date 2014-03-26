@@ -20,14 +20,14 @@ dictffi.cdef("""
     cfuhash_table_t * cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn,
                                                  cfuhash_free_fn_t free_fn);
     int cfuhash_destroy(cfuhash_table_t *ht);
-    int cfuhash_exists(cfuhash_table_t *ht, const char *key);
-    void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
     void * cfuhash_get(cfuhash_table_t *ht, const char *key); /* used only in tests */
     int cfuhash_get_data(cfuhash_table_t *ht, const void *key, size_t key_size,
                          void **data, size_t *data_size);
     int cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *data,
 	                 size_t data_size, void **r);
+    int cfuhash_exists_data(cfuhash_table_t *ht, const void *key, size_t key_size);
+    void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
     unsigned int cfuhash_get_flags(cfuhash_table_t *ht);
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
@@ -97,7 +97,7 @@ class Dict(object):
 
     def __contains__(self, key):
         key = self._key(key)
-        return bool(lib.cfuhash_exists(self.d, key))
+        return bool(lib.cfuhash_exists_data(self.d, key, self.keysize))
 
     def get(self, key, default=None):
         try:

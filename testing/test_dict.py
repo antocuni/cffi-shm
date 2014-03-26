@@ -7,10 +7,11 @@ gclib.init('/run/shm/cffi-shm-testing')
 ffi = cffi.FFI()
 
 def check_dict(d):
-    assert not lib.cfuhash_exists(d, "hello")
-    lib.cfuhash_put_data(d, "hello", ffi.cast('size_t', -1),
+    keysize = ffi.cast('size_t', -1)
+    assert not lib.cfuhash_exists_data(d, "hello", keysize)
+    lib.cfuhash_put_data(d, "hello", keysize,
                          ffi.cast('void*', 42), 0, ffi.NULL)
-    assert lib.cfuhash_exists(d, "hello")
+    assert lib.cfuhash_exists_data(d, "hello", keysize)
     value = lib.cfuhash_get(d, "hello")
     assert int(ffi.cast("long", value)) == 42
 
@@ -32,7 +33,6 @@ def test_libcfu_gc():
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
-    
 
 def test_getsetitem():
     d = Dict(ffi, 'const char*', 'long')
