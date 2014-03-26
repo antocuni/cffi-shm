@@ -20,10 +20,12 @@ dictffi.cdef("""
     cfuhash_table_t * cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn,
                                                  cfuhash_free_fn_t free_fn);
     int cfuhash_destroy(cfuhash_table_t *ht);
-    void * cfuhash_get(cfuhash_table_t *ht, const char *key);
     int cfuhash_exists(cfuhash_table_t *ht, const char *key);
     void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
+    void * cfuhash_get(cfuhash_table_t *ht, const char *key); /* used only in tests */
+    int cfuhash_get_data(cfuhash_table_t *ht, const void *key, size_t key_size,
+                         void **data, size_t *data_size);
     int cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *data,
 	                 size_t data_size, void **r);
 
@@ -69,6 +71,7 @@ class Dict(object):
         self.valuetype = valuetype
         self.keyconverter = get_converter(ffi, keytype)
         self.valueconverter = get_converter(ffi, valuetype)
+        self.retvalue = self.ffi.new('void*[1]') # passed to cfuhash_get_data
         self.d = d
 
     def _key(self, key):
@@ -79,9 +82,10 @@ class Dict(object):
 
     def __getitem__(self, key):
         key = self._key(key)
-        value = lib.cfuhash_get(self.d, key)
-        if value == dictffi.NULL:
+        ret = lib.cfuhash_get_data(self.d, key, self.keysize, self.retvalue, self.ffi.NULL)
+        if ret == 0:
             raise KeyError(key)
+        value = self.retvalue[0]
         value = self.ffi.cast(self.valuetype, value)
         return self.valueconverter.to_python(self.ffi, value)
 
