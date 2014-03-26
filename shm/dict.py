@@ -47,12 +47,18 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
+def _is_string(ffi, t):
+    import _cffi_backend
+    return ffi.typeof(t) == ffi.typeof('char*')
+
 class DictType(object):
     def __init__(self, keyffi, keytype, valueffi, valuetype):
-        assert keytype in ('const char*', 'char*'), 'only string keys are supported for now'
         self.keyffi = keyffi
         self.keytype = keytype
-        self.keysize = keyffi.cast('size_t', -1)
+        if _is_string(keyffi, keytype):
+            self.keysize = keyffi.cast('size_t', -1)
+        else:
+            self.keysize = keyffi.sizeof(keytype)
         self.valueffi = valueffi
         self.valuetype = valuetype
         self.keyconverter = get_converter(keyffi, keytype)

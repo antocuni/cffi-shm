@@ -5,6 +5,12 @@ from shm.dict import lib, DictType
 gclib.init('/run/shm/cffi-shm-testing')
 
 ffi = cffi.FFI()
+ffi.cdef("""
+    typedef struct {
+        char first_name[20];
+        char last_name[20];
+    } full_name_t;
+""")
 
 def check_dict(d):
     keysize = ffi.cast('size_t', -1)
@@ -86,3 +92,22 @@ def test_from_pointer():
     d2 = DT.from_pointer(ptr)
     assert d2['hello'] == 1
     assert d2['world'] == 2
+
+def full_name(first, last):
+    n = gclib.new(ffi, 'full_name_t')
+    n.first_name = first
+    n.last_name = last
+    return n
+
+
+def test_struct_keys():
+    DT = DictType(ffi, 'full_name_t', ffi, 'long')
+    d = DT()
+    antocuni = full_name('Antonio', 'Cuni')
+    antocuni2 = full_name('Antonio', 'Cuni')
+    wrongname = full_name('Antonio', 'Foobar')
+    d[antocuni] = 1
+    d[wrongname] = 2
+    assert d[antocuni] == 1
+    assert d[antocuni2] == 1
+    assert d[wrongname] == 2
