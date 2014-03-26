@@ -39,7 +39,7 @@ class List(object):
 
     def _allocate(self, root):
         with gclib.disabled:
-            lst = gclib.new(listffi, 'List', root)
+            lst = gclib.new(listffi, 'List*', root)
             # even for empty lists, we start by allocating 2 items, and then
             # growing
             lst.items = gclib.new_array(self.ffi, self.itemtype, 2)

@@ -47,7 +47,6 @@ def test_DictType():
 def test_getsetitem():
     DT = DictType(ffi, 'const char*', ffi, 'long')
     d = DT()
-    import pdb;pdb.set_trace()
     py.test.raises(KeyError, "d['hello']")
     d['hello'] = 42
     assert d['hello'] == 42
@@ -94,7 +93,7 @@ def test_from_pointer():
     assert d2['world'] == 2
 
 def full_name(first, last):
-    n = gclib.new(ffi, 'full_name_t')
+    n = gclib.new(ffi, 'full_name_t*')
     n.first_name = first
     n.last_name = last
     return n

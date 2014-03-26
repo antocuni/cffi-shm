@@ -19,10 +19,10 @@ def test_new():
     gclib.roots.reinit()
     gclib.collect()
     gclib.collect()
-    p1 = gclib.new(ffi, 'Point')
+    p1 = gclib.new(ffi, 'Point*')
     assert ffi.typeof(p1) is ffi.typeof('Point*')
     gclib.collect()
-    p2 = gclib.new(ffi, 'Point')
+    p2 = gclib.new(ffi, 'Point*')
     # the GC does not know about any root yet, so it collects p1, and it
     # allocates p2 at the same address as p1
     assert p1 == p2
@@ -31,9 +31,9 @@ def test_new_root():
     gclib.roots.reinit()
     gclib.collect()
     gclib.collect()
-    p1 = gclib.new(ffi, 'Point', root=True)
+    p1 = gclib.new(ffi, 'Point*', root=True)
     gclib.collect()
-    p2 = gclib.new(ffi, 'Point')
+    p2 = gclib.new(ffi, 'Point*')
     assert p1 != p2
 
 def test_new_array():
@@ -51,7 +51,7 @@ def test_new_string():
 def allocate_many(n=10000):
     a = gclib.total_collections()
     for i in range(n):
-        p = gclib.new(ffi, 'Point')
+        p = gclib.new(ffi, 'Point*')
     b = gclib.total_collections()
     return a, b
     
