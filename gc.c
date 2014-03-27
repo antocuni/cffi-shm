@@ -227,7 +227,7 @@ static void *gc_get_memory(const char* path)
     }
     else {
         flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
-        fd = open(path, O_CREAT | O_RDWR, 0660);
+        fd = shm_open(path, O_CREAT | O_RDWR, 0660);
         if (fd == -1) {
             gc_debug("Cannot open %s: %s", path, strerror(errno));
             return NULL;
