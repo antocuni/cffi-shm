@@ -1,6 +1,6 @@
 import cffi
 from shm import gclib
-gclib.init('/run/shm/cffi-shm-testing')
+gclib.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
 ffi.cdef("""

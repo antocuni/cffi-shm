@@ -57,7 +57,7 @@ lib = gcffi.verify(
     """,
     include_dirs = ['GC'],
     #extra_compile_args = ['-g', '-O0'],
-    extra_link_args = ['-Wl,-rpath,GC', '-LGC', '-lshmgc',],
+    extra_link_args = ['-Wl,-rpath,GC', '-LGC', '-lshmgc', '-lrt'],
 )
 old_cwd.chdir()
 

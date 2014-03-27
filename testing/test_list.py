@@ -2,7 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.list import List
-gclib.init('/run/shm/cffi-shm-testing')
+gclib.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
 

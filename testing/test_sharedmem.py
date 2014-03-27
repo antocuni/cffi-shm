@@ -8,7 +8,7 @@ from shm.sharedmem import SharedMemory
 from shm.list import List
 from shm.dict import DictType
 
-PATH = '/run/shm/cffi-shm-testing'
+PATH = '/cffi-shm-testing'
 gclib.init(PATH)
 ffi = cffi.FFI()
 
