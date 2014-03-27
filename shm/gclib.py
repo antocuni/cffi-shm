@@ -18,7 +18,8 @@ old_cwd = ROOTDIR.chdir()
 
 gcffi = cffi.FFI()
 gcffi.cdef("""
-    bool GC_init(const char* path);
+    bool GC_init(const char* path);    /* GC fully initialized */
+    bool GC_open(const char* parth);   /* GC memory mmaped, but cannot allocate */
     void* GC_get_memory(void);
     size_t GC_get_memsize(void);
     void* GC_malloc(size_t size);
@@ -75,10 +76,19 @@ sanity_check()
 
 
 def init(path):
-    shm_dir = py.path.local(path).dirpath()
-    if shm_dir.check(exists=False):
-        raise OSError('The directory %s does not seem to exist' % shm_dir)
-    lib.GC_init(path)
+    if path.count('/') != 1:
+        raise OSError('%r should contain exactly one slash' % path)
+    ret = lib.GC_init(path)
+    if not ret:
+        raise OSError('Failed to initialized the shm GC')
+
+def open(path):
+    if path.count('/') != 1:
+        raise OSError('%r should contain exactly one slash' % path)
+    ret = lib.GC_open(path)
+    if not ret:
+        raise OSError('Failed to open the shm GC')
+
 
 def new(ffi, t, root=False):
     ctype = ffi.typeof(t)

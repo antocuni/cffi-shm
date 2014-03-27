@@ -45,10 +45,9 @@ def test_sharedmem(tmpdir):
         from shm.sharedmem import SharedMemory
         #
         ffi = cffi.FFI()
-        mem = SharedMemory.open(path, address, size)
+        mem = SharedMemory.open(path)
         rawstr = ffi.cast('char*', str_addr)
         assert ffi.string(rawstr) == 'hello world'
-        mem.close()
 
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
@@ -64,10 +63,9 @@ def test_list(tmpdir):
         from shm.list import List
         #
         ffi = cffi.FFI()
-        mem = SharedMemory.open(path, address, size)
+        mem = SharedMemory.open(path)
         lst = List.from_pointer(ffi, 'long', list_addr)
         assert list(lst) == range(100)
-        mem.close()
 
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
@@ -84,12 +82,11 @@ def test_dict(tmpdir):
         #
         ffi = cffi.FFI()
         DT = DictType(ffi, 'const char*', ffi, 'long')
-        mem = SharedMemory.open(path, address, size)
+        mem = SharedMemory.open(path)
         d = DT.from_pointer(dict_addr)
         assert d['hello'] == 1
         assert d['world'] == 2
         assert sorted(d.keys()) == ['hello', 'world']
-        mem.close()
 
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
