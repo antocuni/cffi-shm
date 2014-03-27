@@ -156,7 +156,7 @@ static inline bool gc_is_marked_index(uint8_t *markptr_0, uint32_t idx);
 #include <windows.h>
 #include <winnt.h>
 
-static void *gc_get_memory(const char* path)
+static void *gc_get_memory(const char* path, bool init)
 {
     if (path != NULL) {
         gc_debug("path != NULL not supported on windows");
@@ -211,7 +211,7 @@ static void *gc_get_stackbottom(void)
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-static void *gc_get_memory(const char* path)
+static void *gc_get_memory(const char* path, bool init)
 {
     int flags;
     int fd;
@@ -227,18 +227,23 @@ static void *gc_get_memory(const char* path)
     }
     else {
         flags = MAP_SHARED | MAP_NORESERVE | MAP_FIXED;
-        fd = shm_open(path, O_CREAT | O_RDWR, 0660);
+        int shm_flags = O_RDWR;
+        if (init)
+            shm_flags |= O_CREAT;
+        fd = shm_open(path, shm_flags, 0660);
         if (fd == -1) {
             gc_debug("Cannot open %s: %s", path, strerror(errno));
             return NULL;
         }
-        if (ftruncate(fd, 0) != 0) {
-            gc_debug("Cannot ftrunctate() to 0: %s", strerror(errno));
-            return NULL;
-        }
-        if (ftruncate(fd, memsize) != 0) {
-            gc_debug("Cannot ftruncate() to memsize: %s", strerror(errno));
-            return NULL;
+        if (init) {
+            if (ftruncate(fd, 0) != 0) {
+                gc_debug("Cannot ftrunctate() to 0: %s", strerror(errno));
+                return NULL;
+            }
+            if (ftruncate(fd, memsize) != 0) {
+                gc_debug("Cannot ftruncate() to memsize: %s", strerror(errno));
+                return NULL;
+            }
         }
     }
 
@@ -322,6 +327,12 @@ static double gc_reciprocal(uint32_t size)
 /*
  * GC initialization.
  */
+extern bool GC_open(const char* path)
+{
+    void *gc_memory = gc_get_memory(path, false);
+    return gc_memory == GC_MEMORY;
+}
+
 extern bool GC_init(const char* path)
 {
     if (gc_inited)
@@ -341,7 +352,7 @@ extern bool GC_init(const char* path)
     gc_stackbottom = gc_get_stackbottom();
     
     // Reserve a large chunk of the virtual address space for the GC.
-    void *gc_memory = gc_get_memory(path);
+    void *gc_memory = gc_get_memory(path, true);
     if (gc_memory != GC_MEMORY)
         goto init_error;
 

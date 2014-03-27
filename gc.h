@@ -354,6 +354,16 @@ extern void GC_handle_error(bool fatal, int err);
 extern bool GC_init(const char* path);
 #define gc_init             GC_init
 
+/* Non-GC initalization.
+ * 
+ * mmap the GC memory, without actually initializing the GC.  This is useful
+ * if you have another process which is using libshmgc and you want to read
+ * the memory, without having the ability to allocate new pieces
+ */
+extern bool GC_open(const char* path);
+#define gc_open             GC_open
+
+
 /*
  * GC root registration.
  *
