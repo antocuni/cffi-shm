@@ -1,7 +1,7 @@
 import py
 import cffi
 from shm import gclib
-from shm.struct import cffi_struct
+from shm.pyffi import PyFFI
 gclib.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
@@ -14,12 +14,15 @@ ffi.cdef("""
 """)
 
 def test_immutable_struct():
-    @cffi_struct(ffi, 'Point*', immutable=True)
+    pyffi = PyFFI(ffi)
+    
+    @pyffi.struct('Point*', immutable=True)
     class Point(object):
         def hypot(self):
             import math
             return math.sqrt(self.x**2 + self.y**2)
     #
+    assert pyffi.pytypeof('Point*') is Point
     p = Point(x=3, y=4)
     assert p.x == 3
     assert p.y == 4
@@ -31,7 +34,9 @@ def test_immutable_struct():
     assert p.x == 0
 
 def test_mutable_struct():
-    @cffi_struct(ffi, 'Point*')
+    pyffi = PyFFI(ffi)    
+    
+    @pyffi.struct('Point*')
     class Point(object):
         def hypot(self):
             import math

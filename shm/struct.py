@@ -7,14 +7,15 @@ def _compile_def(src):
     assert len(d) == 1
     return d.values()[0]
 
-class cffi_struct(object):
+class StructDecorator(object):
     """
     class decorator, to wrap a cffi struct into Python class
     """
 
-    def __init__(self, ffi, ctype, immutable=False):
-        self.ffi = ffi
-        self.ctype = ffi.typeof(ctype)
+    def __init__(self, pyffi, ctype, immutable=False):
+        self.pyffi = pyffi
+        self.ffi = pyffi.ffi
+        self.ctype = ctype
         self.immutable = immutable
         if self.ctype.item.kind != 'struct':
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
@@ -25,6 +26,7 @@ class cffi_struct(object):
         self.add_ctor(cls)
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
+        self.pyffi.register(self.ctype, cls)
         return cls
 
     def add_ctor(self, cls):
