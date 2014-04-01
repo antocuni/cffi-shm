@@ -11,6 +11,11 @@ ffi.cdef("""
         int x;
         int y;
     } Point;
+
+    typedef struct {
+        Point* a;
+        Point* b;
+    } Rectangle;
 """)
 
 def test_immutable_struct():
@@ -50,3 +55,23 @@ def test_mutable_struct():
     p.x = 0
     p.y = 0
     assert p._ptr.x == 0
+
+def test_nested_struct():
+    pyffi = PyFFI(ffi)
+
+    @pyffi.struct('Point*')
+    class Point(object):
+        pass
+
+    @pyffi.struct('Rectangle*')
+    class Rectangle(object):
+        pass
+
+    p1 = Point(1, 2)
+    p2 = Point(3, 4)
+    rect = Rectangle(p1, p2)
+    assert isinstance(rect.a, Point)
+    assert rect.a is not p1 # not the same object
+    assert rect.a.x == 1
+    p1.x = 100
+    assert rect.a.x == 100  # but pointing to the same memory

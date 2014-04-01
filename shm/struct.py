@@ -1,12 +1,5 @@
 import py
 
-def _compile_def(src):
-    d = {}
-    exec src.compile() in d
-    del d['__builtins__']
-    assert len(d) == 1
-    return d.values()[0]
-
 class StructDecorator(object):
     """
     class decorator, to wrap a cffi struct into Python class
@@ -15,15 +8,16 @@ class StructDecorator(object):
     def __init__(self, pyffi, ctype, immutable=False):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
-        self.ctype = ctype
+        self.ctype = pyffi.ctypeof(ctype)
         self.immutable = immutable
-        if self.ctype.item.kind != 'struct':
+        if not _is_struct_ptr(self.ctype):
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
 
     def __call__(self, cls):
         cls.ffi = self.ffi
         cls.ctype = self.ctype
         self.add_ctor(cls)
+        cls.from_pointer = classmethod(from_pointer)
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
         self.pyffi.register(self.ctype, cls)
@@ -57,24 +51,59 @@ class StructDecorator(object):
 
     def getter(self, cls, fieldname, field):
         # def __get_x(self):
-        #     return self._ptr.x
+        #     return convert(self._ptr.x)
         #
+        if _is_struct_ptr(field.type):
+            valuecls = self.pyffi.pytypeof(field.type)
+            convert = valuecls.from_pointer
+        else:
+            convert = identity
         src = py.code.Source("""
             def __get_{x}(self):
-                return self._ptr.{x}
+                return convert(self._ptr.{x})
         """.format(x=fieldname))
-        fn = _compile_def(src)
+        fn = _compile_def(src, convert=convert)
         setattr(cls, fn.__name__, fn)
         return fn
 
     def setter(self, cls, fieldname, field):
-        # def __set_x(self):
-        #     return self._ptr.x
+        # def __set_x(self, value):
+        #     self._ptr.x = value        # OR
+        #     #self._ptr.x = value._ptr
         #
+        if _is_struct_ptr(field.type):
+            value_expr = 'value._ptr'
+        else:
+            value_expr = 'value'
         src = py.code.Source("""
             def __set_{x}(self, value):
-                self._ptr.{x} = value
-        """.format(x=fieldname))
+                self._ptr.{x} = {value_expr}
+        """.format(x=fieldname, value_expr=value_expr))
         fn = _compile_def(src)
         setattr(cls, fn.__name__, fn)
         return fn
+
+
+
+# =============================
+# Helpers
+# =============================
+
+def _compile_def(src, **glob):
+    d = {}
+    exec(src.compile(), glob, d)
+    assert len(d) == 1
+    return d.values()[0]
+
+def identity(x):
+    return x
+
+# this is attached to all struct classes
+def from_pointer(cls, ptr):
+    self = cls.__new__(cls)
+    self._ptr = ptr
+    return self
+
+def _is_struct_ptr(ctype):
+    return ctype.kind == 'pointer' and ctype.item.kind == 'struct'
+
