@@ -7,14 +7,15 @@ def _compile_def(src):
     assert len(d) == 1
     return d.values()[0]
 
-class immutable_struct(object):
+class cffi_struct(object):
     """
-    class decorator, to wrap a cffi struct into an immutable Python class
+    class decorator, to wrap a cffi struct into Python class
     """
 
-    def __init__(self, ffi, ctype):
+    def __init__(self, ffi, ctype, immutable=False):
         self.ffi = ffi
         self.ctype = ffi.typeof(ctype)
+        self.immutable = immutable
         if self.ctype.item.kind != 'struct':
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
 
@@ -29,30 +30,49 @@ class immutable_struct(object):
     def add_ctor(self, cls):
         # def __init__(self, x, y):
         #     self._ptr = self.ffi.new(self.ctype)
-        #     self._ptr.x = x
-        #     self._ptr.y = y
+        #     self.__set_x(x)
+        #     self.__set_y(y)
         #
         fieldnames = [name for name, field in self.ctype.item.fields]
         paramlist = ', '.join(fieldnames)
         bodylines = []
         bodylines.append('self._ptr = self.ffi.new(self.ctype)')
         for fieldname in fieldnames:
-            line = 'self._ptr.%s = %s' % (fieldname, fieldname)
+            line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
         init = body.putaround('def __init__(self, %s):' % paramlist)
         cls.__init__ = _compile_def(init)
 
     def add_property(self, cls, fieldname, field):
-        # @property
-        # def x(self):
+        getter = self.getter(cls, fieldname, field)
+        setter = self.setter(cls, fieldname, field)
+        if self.immutable:
+            p = property(getter)
+        else:
+            p = property(getter, setter)
+        setattr(cls, fieldname, p)
+
+    def getter(self, cls, fieldname, field):
+        # def __get_x(self):
         #     return self._ptr.x
         #
         src = py.code.Source("""
-            def getter(self):
-                return self._ptr.%s
-        """ % fieldname)
-        getter = _compile_def(src)
-        getter.__name__ = fieldname
-        getter = property(getter)
-        setattr(cls, fieldname, getter)
+            def __get_{x}(self):
+                return self._ptr.{x}
+        """.format(x=fieldname))
+        fn = _compile_def(src)
+        setattr(cls, fn.__name__, fn)
+        return fn
+
+    def setter(self, cls, fieldname, field):
+        # def __set_x(self):
+        #     return self._ptr.x
+        #
+        src = py.code.Source("""
+            def __set_{x}(self, value):
+                self._ptr.{x} = value
+        """.format(x=fieldname))
+        fn = _compile_def(src)
+        setattr(cls, fn.__name__, fn)
+        return fn
