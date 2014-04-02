@@ -2,7 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.converter import get_converter
-from shm.util import cffi_is_string
+from shm.util import cffi_is_string, cffi_is_struct_ptr
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 GCDIR = ROOTDIR.join('GC')
@@ -52,10 +52,14 @@ class DictType(object):
     def __init__(self, pyffi, keytype, valuetype):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
+        self.nocopy = False # by default, keys are copied
         self.keytype = keytype
         self.valuetype = valuetype
         if cffi_is_string(self.ffi, keytype):
             self.keysize = self.ffi.cast('size_t', -1)
+        elif cffi_is_struct_ptr(self.ffi, keytype):
+            self.nocopy = True
+            self.keysize = self.ffi.cast('size_t', 0)
         else:
             self.keysize = self.ffi.sizeof(keytype)
         self.keyconverter = pyffi.get_converter(keytype, allow_structs_byval=True)
@@ -67,6 +71,9 @@ class DictType(object):
     def __call__(self, root=False):
         ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                              gclib.lib.get_GC_free())
+        if self.nocopy:
+            lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
+        #
         if root:
             gclib.roots.add(ptr)
         return DictInstance(self, ptr)

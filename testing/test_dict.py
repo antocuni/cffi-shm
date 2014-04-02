@@ -95,7 +95,7 @@ def test_from_pointer(pyffi):
     assert d2['world'] == 2
 
 
-def test_struct_keys(pyffi):
+def test_key_struct_byval(pyffi):
     ffi = pyffi.ffi
     ffi.cdef("""
         typedef struct {
@@ -120,6 +120,23 @@ def test_struct_keys(pyffi):
     assert d[antocuni] == 1
     assert d[antocuni2] == 1
     assert d[wrongname] == 2
+
+def test_key_struct_byptr(pyffi):
+    ffi = pyffi.ffi
+    ffi.cdef("""
+        typedef struct {
+            char first_name[20];
+            char last_name[20];
+        } FullName;
+    """)
+
+    @pyffi.struct('FullName*')
+    class FullName(object):
+        pass
+
+    antocuni = FullName('Antonio', 'Cuni')
+    antocuni2 = FullName('Antonio', 'Cuni')
+    wrongname = FullName('Antonio', 'Foobar')
 
     # second: we use struct by pointer, i.e. antocuni and antocuni2 are
     # different keys

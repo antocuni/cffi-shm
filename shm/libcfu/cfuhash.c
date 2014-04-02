@@ -149,6 +149,7 @@ hash_size(unsigned int s) {
 
 static CFU_INLINE void *
 hash_key_dup(cfuhash_table_t *ht, const void *key, size_t key_size) {
+    assert(key_size != 0);
 	void *new_key = ht->malloc_fn(key_size);
 	memcpy(new_key, key, key_size);
 	return new_key;
@@ -156,6 +157,7 @@ hash_key_dup(cfuhash_table_t *ht, const void *key, size_t key_size) {
 
 static CFU_INLINE void *
 hash_key_dup_lower_case(cfuhash_table_t *ht, const void *key, size_t key_size) {
+    assert(key_size != 0);
 	char *new_key = (char *)hash_key_dup(ht, key, key_size);
 	size_t i = 0;
 	for (i = 0; i < key_size; i++) new_key[i] = tolower(new_key[i]);
@@ -167,7 +169,11 @@ static CFU_INLINE unsigned int
 hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buckets) {
 	unsigned int hv = 0;
 
-	if (key) {
+    if (key_size == 0) {
+        /* hashing the pointer itself, not the content */
+        hv = (unsigned int)key;
+    }
+	else if (key) {
 		if (ht->flags & CFUHASH_IGNORE_CASE) {
 			char *lc_key = (char *)hash_key_dup_lower_case(ht, key, key_size);
 			hv = call_hash_func(ht, lc_key, key_size);
@@ -375,6 +381,7 @@ static CFU_INLINE int
 hash_cmp(const void *key, size_t key_size, cfuhash_entry *he, unsigned int case_insensitive) {
 	if (key_size != he->key_size) return 1;
 	if (key == he->key) return 0;
+    if (key_size == 0) return 1; /* compare by pointer, not by value */
 	if (case_insensitive) {
 		return strncasecmp(key, he->key, key_size);
 	}
