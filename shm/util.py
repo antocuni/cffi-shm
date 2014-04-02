@@ -22,4 +22,4 @@ def cffi_is_char_array(ffi, t):
 def cffi_is_struct_ptr(ffi, t):
     ctype = cffi_typeof(ffi, t)
     return ctype.kind == 'pointer' and ctype.item.kind == 'struct'
-
+    

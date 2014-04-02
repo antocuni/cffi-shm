@@ -14,7 +14,7 @@ class Dummy(AbstractConverter):
     def from_python(self, obj):
         return obj
 
-class Struct(AbstractConverter):
+class StructPtr(AbstractConverter):
     def __init__(self, ffi, ctype, class_):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
@@ -25,6 +25,17 @@ class Struct(AbstractConverter):
     def from_python(self, obj):
         return obj._ptr
 
+class StructByVal(AbstractConverter):
+    def __init__(self, ffi, ctype, class_):
+        AbstractConverter.__init__(self, ffi, ctype)
+        self.class_ = class_
+
+    def to_python(self, cdata):
+        raise NotImplementedError('Cannot convert struct-by-val to python')
+
+    def from_python(self, obj):
+        return obj._ptr
+    
 
 class String(AbstractConverter):
     def to_python(self, cdata):

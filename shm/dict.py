@@ -58,7 +58,7 @@ class DictType(object):
             self.keysize = self.ffi.cast('size_t', -1)
         else:
             self.keysize = self.ffi.sizeof(keytype)
-        self.keyconverter = pyffi.get_converter(keytype)
+        self.keyconverter = pyffi.get_converter(keytype, allow_structs_byval=True)
         self.valueconverter = pyffi.get_converter(valuetype)
 
     def __repr__(self):
@@ -94,6 +94,7 @@ class DictInstance(object):
 
     def __getitem__(self, key):
         t = self.dictype
+        key = t.keyconverter.from_python(key)
         ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
                                    self.retbuffer, dictffi.NULL)
         if ret == 0:
@@ -104,6 +105,7 @@ class DictInstance(object):
 
     def __setitem__(self, key, value):
         t = self.dictype
+        key = t.keyconverter.from_python(key) # XXX: strings are copied
         value = t.valueconverter.from_python(value)
         value = t.ffi.cast('void*', value)
         lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)

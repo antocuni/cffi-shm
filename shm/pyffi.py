@@ -16,17 +16,26 @@ class PyFFI(object):
     def register(self, t, pytype):
         ctype = cffi_typeof(self.ffi, t)
         self.pytypes[ctype] = pytype
+        # XXX
+        if cffi_is_struct_ptr(self.ffi, ctype):
+            self.pytypes[ctype.item] = pytype
 
     def struct(self, t, **kwds):
         ctype = cffi_typeof(self.ffi, t)
         return StructDecorator(self, ctype, **kwds)
 
-    def get_converter(self, t, force_cast=False):
-        assert not force_cast # to be implemented
+    def get_converter(self, t, allow_structs_byval=False):
         ctype = cffi_typeof(self.ffi, t)
         if cffi_is_struct_ptr(self.ffi, ctype):
             cls = self.pytypeof(t)
-            return converter.Struct(self.ffi, ctype, cls)
+            return converter.StructPtr(self.ffi, ctype, cls)
+        elif ctype.kind == 'struct':
+            if not allow_structs_byval:
+                msg = ("structs byval are not allowed by default. You need to use a "
+                       "pointer to a struct, or specify allow_structs_byval=True")
+                raise ValueError(msg)
+            cls = self.pytypeof(t)
+            return converter.StructByVal(self.ffi, ctype, cls)
         if cffi_is_string(self.ffi, ctype):
             return converter.String(self.ffi, ctype)
         elif cffi_is_char_array(self.ffi, t):

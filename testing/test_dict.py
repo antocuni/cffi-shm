@@ -101,19 +101,18 @@ def test_struct_keys(pyffi):
         typedef struct {
             char first_name[20];
             char last_name[20];
-        } full_name_t;
+        } FullName;
     """)
-    def full_name(first, last):
-        n = gclib.new(ffi, 'full_name_t*')
-        n.first_name = first
-        n.last_name = last
-        return n
 
-    DT = DictType(pyffi, 'full_name_t', 'long')
+    @pyffi.struct('FullName*')
+    class FullName(object):
+        pass
+
+    DT = DictType(pyffi, 'FullName', 'long')
     d = DT()
-    antocuni = full_name('Antonio', 'Cuni')
-    antocuni2 = full_name('Antonio', 'Cuni')
-    wrongname = full_name('Antonio', 'Foobar')
+    antocuni = FullName('Antonio', 'Cuni')
+    antocuni2 = FullName('Antonio', 'Cuni')
+    wrongname = FullName('Antonio', 'Foobar')
     d[antocuni] = 1
     d[wrongname] = 2
     assert d[antocuni] == 1
