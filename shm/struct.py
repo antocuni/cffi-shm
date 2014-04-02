@@ -18,7 +18,7 @@ class StructDecorator(object):
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
 
     def __call__(self, cls):
-        cls.ffi = self.ffi
+        cls.pyffi = self.pyffi
         cls.ctype = self.ctype
         self.add_ctor(cls)
         cls.from_pointer = classmethod(from_pointer)
@@ -29,20 +29,20 @@ class StructDecorator(object):
 
     def add_ctor(self, cls):
         # def __init__(self, x, y):
-        #     self._ptr = self.ffi.new(self.ctype)
+        #     self._ptr = gclib.new(self.pyffi.ffi, self.ctype)
         #     self.__set_x(x)
         #     self.__set_y(y)
         #
         fieldnames = [name for name, field in self.ctype.item.fields]
         paramlist = ', '.join(fieldnames)
         bodylines = []
-        bodylines.append('self._ptr = self.ffi.new(self.ctype)')
+        bodylines.append('self._ptr = gclib.new(self.pyffi.ffi, self.ctype)')
         for fieldname in fieldnames:
             line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
         init = body.putaround('def __init__(self, %s):' % paramlist)
-        cls.__init__ = compile_def(init)
+        cls.__init__ = compile_def(init, gclib=gclib)
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)

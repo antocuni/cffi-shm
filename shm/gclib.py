@@ -1,5 +1,6 @@
 import py
 import cffi
+from shm.util import cffi_typeof
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 GCDIR = ROOTDIR.join('GC')
@@ -92,7 +93,7 @@ def open(path):
 
 
 def new(ffi, t, root=False):
-    ctype = ffi.typeof(t)
+    ctype = cffi_typeof(ffi, t)
     if ctype.kind != 'pointer':
         raise TypeError("Expected a pointer, got '%s'" % t)
     ptr = lib.GC_malloc(ffi.sizeof(ctype.item))
