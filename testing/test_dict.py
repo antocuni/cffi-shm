@@ -108,13 +108,25 @@ def test_struct_keys(pyffi):
     class FullName(object):
         pass
 
-    DT = DictType(pyffi, 'FullName', 'long')
-    d = DT()
     antocuni = FullName('Antonio', 'Cuni')
     antocuni2 = FullName('Antonio', 'Cuni')
     wrongname = FullName('Antonio', 'Foobar')
+
+    # first: we use struct by value as keys
+    DT = DictType(pyffi, 'FullName', 'long')
+    d = DT()
     d[antocuni] = 1
     d[wrongname] = 2
     assert d[antocuni] == 1
     assert d[antocuni2] == 1
+    assert d[wrongname] == 2
+
+    # second: we use struct by pointer, i.e. antocuni and antocuni2 are
+    # different keys
+    DT = DictType(pyffi, 'FullName*', 'long')
+    d = DT()
+    d[antocuni] = 1
+    d[wrongname] = 2
+    assert d[antocuni] == 1
+    assert d.get(antocuni2) is None
     assert d[wrongname] == 2
