@@ -1,6 +1,7 @@
 import py
 from shm import gclib
-from shm.util import cffi_typeof, cffi_is_struct_ptr, cffi_is_string, compile_def, identity
+from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
+                      cffi_is_char_array, compile_def, identity)
 
 
 class StructDecorator(object):
@@ -61,6 +62,8 @@ class StructDecorator(object):
             convert = valuecls.from_pointer
         elif cffi_is_string(self.ffi, field.type):
             convert = self.ffi.string
+        elif cffi_is_char_array(self.ffi, field.type):
+            convert = self.ffi.string
         else:
             convert = identity
         src = py.code.Source("""
@@ -79,6 +82,10 @@ class StructDecorator(object):
             convert = to_pointer
         elif cffi_is_string(self.ffi, field.type):
             convert = gclib.new_string
+        #elif array-of-chars:
+        #    no conversion needed, cffi will take care of
+        #    copying the python string to the array
+        #    XXX: should we set to 0 the whole array first?
         else:
             convert = identity
         src = py.code.Source("""
