@@ -54,45 +54,22 @@ class StructDecorator(object):
         setattr(cls, fieldname, p)
 
     def getter(self, cls, fieldname, field):
-        # def __get_x(self):
-        #     return convert(self._ptr.x)
-        #
-        if cffi_is_struct_ptr(self.ffi, field.type):
-            valuecls = self.pyffi.pytypeof(field.type)
-            convert = valuecls.from_pointer
-        elif cffi_is_string(self.ffi, field.type):
-            convert = self.ffi.string
-        elif cffi_is_char_array(self.ffi, field.type):
-            convert = self.ffi.string
-        else:
-            convert = identity
+        conv = self.pyffi.get_converter(field.type)
         src = py.code.Source("""
             def __get_{x}(self):
-                return convert(self._ptr.{x})
+                return conv.to_python(self._ptr.{x})
         """.format(x=fieldname))
-        fn = compile_def(src, convert=convert)
+        fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
 
     def setter(self, cls, fieldname, field):
-        # def __set_x(self, value):
-        #     self._ptr.x = convert(value)
-        #
-        if cffi_is_struct_ptr(self.ffi, field.type):
-            convert = to_pointer
-        elif cffi_is_string(self.ffi, field.type):
-            convert = gclib.new_string
-        #elif array-of-chars:
-        #    no conversion needed, cffi will take care of
-        #    copying the python string to the array
-        #    XXX: should we set to 0 the whole array first?
-        else:
-            convert = identity
+        conv = self.pyffi.get_converter(field.type)
         src = py.code.Source("""
             def __set_{x}(self, value):
-                self._ptr.{x} = convert(value)
+                self._ptr.{x} = conv.from_python(value)
         """.format(x=fieldname))
-        fn = compile_def(src, convert=convert)
+        fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
 

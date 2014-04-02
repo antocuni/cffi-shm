@@ -24,7 +24,12 @@ class PyFFI(object):
     def get_converter(self, t, force_cast=False):
         assert not force_cast # to be implemented
         ctype = cffi_typeof(self.ffi, t)
+        if cffi_is_struct_ptr(self.ffi, ctype):
+            cls = self.pytypeof(t)
+            return converter.StructConverter(self.ffi, ctype, cls)
         if cffi_is_string(self.ffi, ctype):
             return converter.StringConverter(self.ffi, ctype)
+        elif cffi_is_char_array(self.ffi, t):
+            return converter.ArrayOfCharsConverter(self.ffi, ctype)
         else:
-            assert False
+            return converter.DummyConverter(self.ffi, ctype)
