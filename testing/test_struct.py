@@ -75,3 +75,21 @@ def test_nested_struct():
     assert rect.a.x == 1
     p1.x = 100
     assert rect.a.x == 100  # but pointing to the same memory
+
+def test_string():
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct {
+            const char* name;
+        } Person;
+    """)
+    pyffi = PyFFI(ffi)
+
+    @pyffi.struct('Person*')
+    class Person(object):
+        pass
+
+    p = Person('Foobar')
+    assert p.name == 'Foobar'
+    assert gclib.isptr(p._ptr.name)
+    assert ffi.string(p._ptr.name) == 'Foobar'

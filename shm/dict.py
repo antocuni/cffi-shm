@@ -2,6 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.converter import get_converter
+from shm.util import cffi_is_string
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 GCDIR = ROOTDIR.join('GC')
@@ -47,15 +48,11 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
-def _is_string(ffi, t):
-    import _cffi_backend
-    return ffi.typeof(t) == ffi.typeof('char*')
-
 class DictType(object):
     def __init__(self, keyffi, keytype, valueffi, valuetype):
         self.keyffi = keyffi
         self.keytype = keytype
-        if _is_string(keyffi, keytype):
+        if cffi_is_string(keyffi, keytype):
             self.keysize = keyffi.cast('size_t', -1)
         else:
             self.keysize = keyffi.sizeof(keytype)
