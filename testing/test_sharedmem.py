@@ -7,6 +7,7 @@ from shm import gclib
 from shm.sharedmem import SharedMemory
 from shm.list import List
 from shm.dict import DictType
+from shm.pyffi import PyFFI
 
 PATH = '/cffi-shm-testing'
 gclib.init(PATH)
@@ -78,19 +79,21 @@ def test_dict(tmpdir):
     def child(path, address, size, dict_addr):
         import cffi
         from shm.sharedmem import SharedMemory
+        from shm.pyffi import PyFFI
         from shm.dict import DictType
         #
-        ffi = cffi.FFI()
-        DT = DictType(ffi, 'const char*', ffi, 'long')
+        pyffi = PyFFI(cffi.FFI())
+        DT = DictType(pyffi, 'const char*', 'long')
         mem = SharedMemory.open(path)
         d = DT.from_pointer(dict_addr)
         assert d['hello'] == 1
         assert d['world'] == 2
         assert sorted(d.keys()) == ['hello', 'world']
 
+    pyffi = PyFFI(ffi)
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT(root=True)
     d['hello'] = 1
     d['world'] = 2

@@ -49,17 +49,17 @@ lib = dictffi.verify(
 old_cwd.chdir()
 
 class DictType(object):
-    def __init__(self, keyffi, keytype, valueffi, valuetype):
-        self.keyffi = keyffi
+    def __init__(self, pyffi, keytype, valuetype):
+        self.pyffi = pyffi
+        self.ffi = pyffi.ffi
         self.keytype = keytype
-        if cffi_is_string(keyffi, keytype):
-            self.keysize = keyffi.cast('size_t', -1)
-        else:
-            self.keysize = keyffi.sizeof(keytype)
-        self.valueffi = valueffi
         self.valuetype = valuetype
-        self.keyconverter = get_converter(keyffi, keytype)
-        self.valueconverter = get_converter(valueffi, valuetype)
+        if cffi_is_string(self.ffi, keytype):
+            self.keysize = self.ffi.cast('size_t', -1)
+        else:
+            self.keysize = self.ffi.sizeof(keytype)
+        self.keyconverter = pyffi.get_converter(keytype)
+        self.valueconverter = pyffi.get_converter(valuetype)
 
     def __repr__(self):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
@@ -74,6 +74,10 @@ class DictType(object):
     def from_pointer(self, ptr):
         ptr = dictffi.cast('cfuhash_table_t*', ptr)
         return DictInstance(self, ptr)
+
+
+
+
 
 class DictInstance(object):
 
@@ -95,13 +99,13 @@ class DictInstance(object):
         if ret == 0:
             raise KeyError(key)
         value = self.retbuffer[0]
-        value = t.valueffi.cast(t.valuetype, value)
+        value = t.ffi.cast(t.valuetype, value)
         return t.valueconverter.to_python(value)
 
     def __setitem__(self, key, value):
         t = self.dictype
         value = t.valueconverter.from_python(value)
-        value = t.valueffi.cast('void*', value)
+        value = t.ffi.cast('void*', value)
         lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)
 
     def __contains__(self, key):

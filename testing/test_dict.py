@@ -1,18 +1,20 @@
 import py
+import pytest
 import cffi
 from shm import gclib
 from shm.dict import lib, DictType
+from shm.pyffi import PyFFI
 gclib.init('/cffi-shm-testing')
 
-ffi = cffi.FFI()
-ffi.cdef("""
-    typedef struct {
-        char first_name[20];
-        char last_name[20];
-    } full_name_t;
-""")
+@pytest.fixture
+def ffi():
+    return cffi.FFI()
 
-def check_dict(d):
+@pytest.fixture
+def pyffi(ffi):
+    return PyFFI(ffi)
+
+def check_dict(ffi, d):
     keysize = ffi.cast('size_t', -1)
     assert not lib.cfuhash_exists_data(d, "hello", keysize)
     lib.cfuhash_put_data(d, "hello", keysize,
@@ -21,59 +23,59 @@ def check_dict(d):
     value = lib.cfuhash_get(d, "hello")
     assert int(ffi.cast("long", value)) == 42
 
-def test_libcfu():
+def test_libcfu(ffi):
     # first, we check that it works with the system malloc
     d = lib.cfuhash_new()
-    check_dict(d)
+    check_dict(ffi, d)
     lib.cfuhash_destroy(d)
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d < gc_base_mem
 
-def test_libcfu_gc():
+def test_libcfu_gc(ffi):
     # then, we check that it works with the the GC malloc
     d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                        gclib.lib.get_GC_free())
-    check_dict(d)
+    check_dict(ffi, d)
     lib.cfuhash_destroy(d)
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
 
-def test_DictType():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_DictType(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     assert repr(DT) == '<shm type dict [const char*: long]>'
 
-def test_getsetitem():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_getsetitem(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT()
     py.test.raises(KeyError, "d['hello']")
     d['hello'] = 42
     assert d['hello'] == 42
 
-def test_strvalue():
-    DT = DictType(ffi, 'const char*', ffi, 'const char*')
+def test_strvalue(pyffi):
+    DT = DictType(pyffi, 'const char*', 'const char*')
     d = DT()
     d['hello'] = 'world'
     assert d['hello'] == 'world'
 
-def test_contains():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_contains(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT()
     assert 'hello' not in d
     d['hello'] = 42
     assert 'hello' in d
 
-def test_get():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_get(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT()
     assert d.get('hello') is None
     assert d.get('hello', 123) == 123
     d['hello'] = 42
     assert d.get('hello') == 42
 
-def test_keys():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_keys(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT()
     d['foo'] = 1
     d['bar'] = 2
@@ -81,26 +83,33 @@ def test_keys():
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
 
-def test_from_pointer():
-    DT = DictType(ffi, 'const char*', ffi, 'long')
+def test_from_pointer(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
     d = DT(root=True)
     d['hello'] = 1
     d['world'] = 2
-    ptr = ffi.cast('void*', d.ht)
+    ptr = pyffi.ffi.cast('void*', d.ht)
     #
     d2 = DT.from_pointer(ptr)
     assert d2['hello'] == 1
     assert d2['world'] == 2
 
-def full_name(first, last):
-    n = gclib.new(ffi, 'full_name_t*')
-    n.first_name = first
-    n.last_name = last
-    return n
 
+def test_struct_keys(pyffi):
+    ffi = pyffi.ffi
+    ffi.cdef("""
+        typedef struct {
+            char first_name[20];
+            char last_name[20];
+        } full_name_t;
+    """)
+    def full_name(first, last):
+        n = gclib.new(ffi, 'full_name_t*')
+        n.first_name = first
+        n.last_name = last
+        return n
 
-def test_struct_keys():
-    DT = DictType(ffi, 'full_name_t', ffi, 'long')
+    DT = DictType(pyffi, 'full_name_t', 'long')
     d = DT()
     antocuni = full_name('Antonio', 'Cuni')
     antocuni2 = full_name('Antonio', 'Cuni')
