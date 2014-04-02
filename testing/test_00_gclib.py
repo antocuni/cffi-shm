@@ -20,6 +20,7 @@ def test_new():
     gclib.collect()
     gclib.collect()
     p1 = gclib.new(ffi, 'Point*')
+    assert gclib.isptr(p1)
     assert ffi.typeof(p1) is ffi.typeof('Point*')
     gclib.collect()
     p2 = gclib.new(ffi, 'Point*')

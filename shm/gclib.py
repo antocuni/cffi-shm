@@ -20,6 +20,7 @@ gcffi = cffi.FFI()
 gcffi.cdef("""
     bool GC_init(const char* path);    /* GC fully initialized */
     bool GC_open(const char* parth);   /* GC memory mmaped, but cannot allocate */
+    bool GC_isptr(void* ptr);
     void* GC_get_memory(void);
     size_t GC_get_memsize(void);
     void* GC_malloc(size_t size);
@@ -128,6 +129,7 @@ collect = lib.GC_collect
 total_collections = lib.GC_total_collections
 enable = lib.GC_enable
 disable = lib.GC_disable
+isptr = lib.GC_isptr
 
 class RootCollection(object):
     """
