@@ -96,11 +96,11 @@ class DictInstance(object):
             raise KeyError(key)
         value = self.retbuffer[0]
         value = t.valueffi.cast(t.valuetype, value)
-        return t.valueconverter.to_python(t.valueffi, value)
+        return t.valueconverter.to_python(value)
 
     def __setitem__(self, key, value):
         t = self.dictype
-        value = t.valueconverter.from_python(t.valueffi, value)
+        value = t.valueconverter.from_python(value)
         value = t.valueffi.cast('void*', value)
         lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)
 
@@ -125,7 +125,7 @@ class DictInstance(object):
             keys = []
             for i in range(size):
                 key = keys_array[i]
-                key = t.keyconverter.to_python(t.keyffi, key)
+                key = t.keyconverter.to_python(key)
                 keys.append(key)
             return keys
         finally:

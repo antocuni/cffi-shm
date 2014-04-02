@@ -2,39 +2,43 @@ from collections import defaultdict
 import cffi
 from shm import gclib
 
-class DummyConverter(object):
-    @staticmethod
-    def to_python(ffi, cdata):
+class AbstractConverter(object):
+    def __init__(self, ffi, ctype):
+        self.ffi = ffi
+        self.ctype = ctype
+
+class DummyConverter(AbstractConverter):
+    def to_python(self, cdata):
         return cdata
 
-    @staticmethod
-    def from_python(ffi, obj):
+    def from_python(self, obj):
         return obj
 
-class StrConverter(object):
-    @staticmethod
-    def to_python(ffi, cdata):
-        cdata = ffi.cast('char*', cdata)
-        return ffi.string(cdata)
+class StringConverter(AbstractConverter):
+    def to_python(self, cdata):
+        cdata = self.ffi.cast('char*', cdata)
+        return self.ffi.string(cdata)
 
-    @staticmethod
-    def from_python(ffi, s):
+    def from_python(self, s):
         return gclib.new_string(s)
 
-class IntConverter(object):
-    @staticmethod
-    def to_python(ffi, cdata):
+class IntConverter(AbstractConverter):
+    def to_python(self, cdata):
         return int(cdata)
 
-    @staticmethod
-    def from_python(ffi, obj):
+    def from_python(self, obj):
         return obj
+
+
+# ==========================================================
+# XXX: to be killed and integrated with pyffi.get_converter
 
 _ffi = cffi.FFI()
 _converter = defaultdict(lambda: DummyConverter)
-_converter[_ffi.typeof('char*')] = StrConverter
+_converter[_ffi.typeof('char*')] = StringConverter
 _converter[_ffi.typeof('long')] = IntConverter
 
-def get_converter(ffi, typ):
-    ctype = ffi.typeof(typ)
-    return _converter[ctype]
+def get_converter(ffi, t):
+    ctype = ffi.typeof(t)
+    cls = _converter[ctype]
+    return cls(ffi, ctype)
