@@ -7,14 +7,14 @@ class AbstractConverter(object):
         self.ffi = ffi
         self.ctype = ctype
 
-class DummyConverter(AbstractConverter):
+class Dummy(AbstractConverter):
     def to_python(self, cdata):
         return cdata
 
     def from_python(self, obj):
         return obj
 
-class StructConverter(AbstractConverter):
+class Struct(AbstractConverter):
     def __init__(self, ffi, ctype, class_):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
@@ -26,7 +26,7 @@ class StructConverter(AbstractConverter):
         return obj._ptr
 
 
-class StringConverter(AbstractConverter):
+class String(AbstractConverter):
     def to_python(self, cdata):
         cdata = self.ffi.cast('char*', cdata) # XXX: integrate with 'force_cast'
         return self.ffi.string(cdata)
@@ -34,7 +34,7 @@ class StringConverter(AbstractConverter):
     def from_python(self, s):
         return gclib.new_string(s)
 
-class ArrayOfCharsConverter(AbstractConverter):
+class ArrayOfChar(AbstractConverter):
     """
     Like StringConverter, but it does not need to GC-allocate a new string
     when converting from python, because the data will be copied anyway
@@ -46,7 +46,7 @@ class ArrayOfCharsConverter(AbstractConverter):
         return s
 
 
-class IntConverter(AbstractConverter):
+class Int(AbstractConverter):
     def to_python(self, cdata):
         return int(cdata)
 
@@ -58,9 +58,9 @@ class IntConverter(AbstractConverter):
 # XXX: to be killed and integrated with pyffi.get_converter
 
 _ffi = cffi.FFI()
-_converter = defaultdict(lambda: DummyConverter)
-_converter[_ffi.typeof('char*')] = StringConverter
-_converter[_ffi.typeof('long')] = IntConverter
+_converter = defaultdict(lambda: Dummy)
+_converter[_ffi.typeof('char*')] = String
+_converter[_ffi.typeof('long')] = Int
 
 def get_converter(ffi, t):
     ctype = ffi.typeof(t)

@@ -26,10 +26,10 @@ class PyFFI(object):
         ctype = cffi_typeof(self.ffi, t)
         if cffi_is_struct_ptr(self.ffi, ctype):
             cls = self.pytypeof(t)
-            return converter.StructConverter(self.ffi, ctype, cls)
+            return converter.Struct(self.ffi, ctype, cls)
         if cffi_is_string(self.ffi, ctype):
-            return converter.StringConverter(self.ffi, ctype)
+            return converter.String(self.ffi, ctype)
         elif cffi_is_char_array(self.ffi, t):
-            return converter.ArrayOfCharsConverter(self.ffi, ctype)
+            return converter.ArrayOfChar(self.ffi, ctype)
         else:
-            return converter.DummyConverter(self.ffi, ctype)
+            return converter.Dummy(self.ffi, ctype)
