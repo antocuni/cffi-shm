@@ -56,6 +56,19 @@ def test_mutable_struct():
     p.y = 0
     assert p._ptr.x == 0
 
+def test_override_init():
+    pyffi = PyFFI(ffi)
+
+    @pyffi.struct('Point*', immutable=True)
+    class Point(object):
+        def __init__(self):
+            self._init(x=1, y=2)
+    #
+    p = Point()
+    assert p.x == 1
+    assert p.y == 2
+
+
 def test_nested_struct():
     pyffi = PyFFI(ffi)
 

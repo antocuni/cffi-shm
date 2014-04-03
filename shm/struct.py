@@ -34,11 +34,13 @@ class StructDecorator(object):
         return cls
 
     def add_ctor(self, cls):
-        # def __init__(self, x, y):
+        # def _init(self, x, y):
         #     self._ptr = gclib.new(self.pyffi.ffi, self.ctype)
         #     self.__set_x(x)
         #     self.__set_y(y)
         #
+        # def __init__(self, x, y):
+        #     self._init(x, y)
         paramlist = ', '.join(self.fieldnames)
         bodylines = []
         bodylines.append('self._ptr = gclib.new(self.pyffi.ffi, self.ctype)')
@@ -46,8 +48,17 @@ class StructDecorator(object):
             line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
-        init = body.putaround('def __init__(self, %s):' % paramlist)
-        cls.__init__ = compile_def(init, gclib=gclib)
+        _init = body.putaround('def _init(self, %s):' % paramlist)
+        cls._init = compile_def(_init, gclib=gclib)
+        #
+        # we add the proper __init__ only if it's not already defined
+        if '__init__' in cls.__dict__:
+            return
+        ctor = py.code.Source("""
+            def __init__(self, {paramlist}):
+                self._init({paramlist})
+        """.format(paramlist=paramlist))
+        cls.__init__ = compile_def(ctor)
 
     def add_key(self, cls):
         # def __key(self):
