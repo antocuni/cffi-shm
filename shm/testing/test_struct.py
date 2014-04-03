@@ -76,6 +76,20 @@ def test_nested_struct():
     p1.x = 100
     assert rect.a.x == 100  # but pointing to the same memory
 
+def test_equality_hash():
+    pyffi = PyFFI(ffi)
+
+    @pyffi.struct('Point*', immutable=True)
+    class Point(object):
+        pass
+
+    p1 = Point(1, 2)
+    p2 = Point(1, 2)
+    assert hash(p1) == hash(p2)
+    assert p1 == p2
+    assert p1 != None # check that the exception is not propagated outside __eq__
+
+
 def test_string():
     ffi = cffi.FFI()
     ffi.cdef("""

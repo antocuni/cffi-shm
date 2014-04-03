@@ -16,12 +16,18 @@ class StructDecorator(object):
         self.immutable = immutable
         if not cffi_is_struct_ptr(self.ffi, self.ctype):
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
+        self.fieldnames = [name for name, field in self.ctype.item.fields]
 
     def __call__(self, cls):
         cls.pyffi = self.pyffi
         cls.ctype = self.ctype
         self.add_ctor(cls)
         cls.from_pointer = classmethod(from_pointer)
+        if self.immutable:
+            self.add_key(cls)
+            cls.__hash__ = __hash__
+            cls.__eq__ = __eq__
+        #
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
         self.pyffi.register(self.ctype, cls)
@@ -33,16 +39,29 @@ class StructDecorator(object):
         #     self.__set_x(x)
         #     self.__set_y(y)
         #
-        fieldnames = [name for name, field in self.ctype.item.fields]
-        paramlist = ', '.join(fieldnames)
+        paramlist = ', '.join(self.fieldnames)
         bodylines = []
         bodylines.append('self._ptr = gclib.new(self.pyffi.ffi, self.ctype)')
-        for fieldname in fieldnames:
+        for fieldname in self.fieldnames:
             line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
         init = body.putaround('def __init__(self, %s):' % paramlist)
         cls.__init__ = compile_def(init, gclib=gclib)
+
+    def add_key(self, cls):
+        # def __key(self):
+        #     return self.x, self.y
+        #
+        itemlist = ['self.%s' % x for x in self.fieldnames]
+        items = ', '.join(itemlist)
+        src = py.code.Source("""
+            def __key(self):
+                return %s
+        """ % items)
+        fn = compile_def(src)
+        # we need to use setattr, else __key gets mangled into __StructDecorator_key
+        setattr(cls, '__key', fn)
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)
@@ -78,8 +97,14 @@ class StructDecorator(object):
 def to_pointer(obj):
     return obj._ptr
 
-# this is attached to all struct classes
+# these are attached to all struct classes
 def from_pointer(cls, ptr):
     self = cls.__new__(cls)
     self._ptr = ptr
     return self
+
+def __hash__(self):
+    return hash(self.__key())
+
+def __eq__(self, other):
+    return self.__key() == other.__key()
