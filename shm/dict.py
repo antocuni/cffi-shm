@@ -69,8 +69,9 @@ class DictType(object):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
 
     def __call__(self, root=False):
-        ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
-                                             gclib.lib.get_GC_free())
+        with gclib.disabled:
+            ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
+                                                 gclib.lib.get_GC_free())
         if self.nocopy:
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
         #
