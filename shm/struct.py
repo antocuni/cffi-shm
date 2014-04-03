@@ -108,6 +108,9 @@ def to_pointer(obj):
 
 # these are attached to all struct classes
 def from_pointer(cls, ptr):
+    ffi = cls.pyffi.ffi
+    if cls.ctype != ffi.typeof(ptr):
+        raise TypeError("Expected %s, got %s" % (cls.ctype, ffi.typeof(ptr)))
     self = cls.__new__(cls)
     self._ptr = ptr
     return self

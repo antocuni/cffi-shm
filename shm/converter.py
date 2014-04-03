@@ -7,12 +7,20 @@ class AbstractConverter(object):
         self.ffi = ffi
         self.ctype = ctype
 
-    def to_python(self, cdata):
+    def to_python(self, cdata, force_cast=False):
         """
         Convert the given cdata into the corresponding Python object.  E.g.,
         <cdata char*> are converted into strings, <cdata long> into Python
         ints, and pointer to structs into their PyFFI equivalent.
+
+        cdata is expected to be of the given ctype unless force_cast==True, in
+        that case the proper cast will be performed.
         """
+        if force_cast:
+            cdata = self.ffi.cast(self.ctype, cdata)
+        return self.to_python_impl(cdata)
+
+    def to_python_impl(self, cdata):
         raise NotImplementedError
 
     def from_python(self, obj, ensure_shm=True):
@@ -45,7 +53,7 @@ class StructPtr(AbstractConverter):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
 
-    def to_python(self, cdata):
+    def to_python_impl(self, cdata):
         return self.class_.from_pointer(cdata)
 
     def from_python(self, obj, ensure_shm=True):
@@ -56,7 +64,7 @@ class StructByVal(AbstractConverter):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
 
-    def to_python(self, cdata):
+    def to_python_impl(self, cdata):
         raise NotImplementedError('Cannot convert struct-by-val to python')
 
     def from_python(self, obj, ensure_shm=True):
@@ -64,7 +72,7 @@ class StructByVal(AbstractConverter):
     
 
 class String(AbstractConverter):
-    def to_python(self, cdata):
+    def to_python_impl(self, cdata):
         return self.ffi.string(cdata)
 
     def from_python(self, s, ensure_shm=True):

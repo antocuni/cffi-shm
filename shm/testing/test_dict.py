@@ -121,6 +121,7 @@ def test_key_struct_byval(pyffi):
     assert d[antocuni2] == 1
     assert d[wrongname] == 2
 
+
 def test_key_struct_byptr(pyffi):
     ffi = pyffi.ffi
     ffi.cdef("""

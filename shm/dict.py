@@ -2,7 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.converter import get_converter
-from shm.util import cffi_is_string, cffi_is_struct_ptr
+from shm.util import cffi_is_string, cffi_is_struct_ptr, cffi_is_struct
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 GCDIR = ROOTDIR.join('GC')
@@ -141,8 +141,7 @@ class DictInstance(object):
             keys = []
             for i in range(size):
                 key = keys_array[i]
-                key = t.ffi.cast(t.keytype, key)
-                key = t.keyconverter.to_python(key)
+                key = t.keyconverter.to_python(key, force_cast=True)
                 keys.append(key)
             return keys
         finally:
