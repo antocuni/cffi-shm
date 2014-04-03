@@ -65,7 +65,6 @@ class StructByVal(AbstractConverter):
 
 class String(AbstractConverter):
     def to_python(self, cdata):
-        cdata = self.ffi.cast('char*', cdata) # XXX: integrate with 'force_cast'
         return self.ffi.string(cdata)
 
     def from_python(self, s, ensure_shm=True):
