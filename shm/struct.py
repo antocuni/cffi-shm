@@ -61,18 +61,16 @@ class StructDecorator(object):
         cls.__init__ = compile_def(ctor)
 
     def add_key(self, cls):
-        # def __key(self):
+        # def _key(self):
         #     return self.x, self.y
         #
         itemlist = ['self.%s' % x for x in self.fieldnames]
         items = ', '.join(itemlist)
         src = py.code.Source("""
-            def __key(self):
+            def _key(self):
                 return %s
         """ % items)
-        fn = compile_def(src)
-        # we need to use setattr, else __key gets mangled into __StructDecorator_key
-        setattr(cls, '__key', fn)
+        cls._key = compile_def(src)
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)
@@ -115,7 +113,7 @@ def from_pointer(cls, ptr):
     return self
 
 def __hash__(self):
-    return hash(self.__key())
+    return hash(self._key())
 
 def __eq__(self, other):
-    return self.__key() == other.__key()
+    return self._key() == other._key()

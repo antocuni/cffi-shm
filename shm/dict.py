@@ -141,6 +141,7 @@ class DictInstance(object):
             keys = []
             for i in range(size):
                 key = keys_array[i]
+                key = t.ffi.cast(t.keytype, key)
                 key = t.keyconverter.to_python(key)
                 keys.append(key)
             return keys

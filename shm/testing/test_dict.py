@@ -132,7 +132,9 @@ def test_key_struct_byptr(pyffi):
 
     @pyffi.struct('FullName*')
     class FullName(object):
-        pass
+        # this is needed for 'sorted' below
+        def __cmp__(self, other):
+            return cmp(self._key(), other._key())
 
     antocuni = FullName('Antonio', 'Cuni')
     antocuni2 = FullName('Antonio', 'Cuni')
@@ -147,3 +149,6 @@ def test_key_struct_byptr(pyffi):
     assert d[antocuni] == 1
     assert d.get(antocuni2) is None
     assert d[wrongname] == 2
+    #
+    keys = sorted(d.keys())
+    assert keys == [antocuni, wrongname]
