@@ -99,9 +99,12 @@ class DictInstance(object):
                                                 self.dictype.valuetype,
                                                 addr)
 
+    def _key(self, key):
+        return self.dictype.keyconverter.from_python(key, ensure_shm=False)
+
     def __getitem__(self, key):
         t = self.dictype
-        key = t.keyconverter.from_python(key)
+        key = self._key(key)
         ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
                                    self.retbuffer, dictffi.NULL)
         if ret == 0:
@@ -112,7 +115,7 @@ class DictInstance(object):
 
     def __setitem__(self, key, value):
         t = self.dictype
-        key = t.keyconverter.from_python(key) # XXX: strings are copied
+        key = self._key(key)
         value = t.valueconverter.from_python(value)
         value = t.ffi.cast('void*', value)
         lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)

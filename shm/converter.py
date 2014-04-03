@@ -7,11 +7,37 @@ class AbstractConverter(object):
         self.ffi = ffi
         self.ctype = ctype
 
+    def to_python(self, cdata):
+        """
+        Convert the given cdata into the corresponding Python object.  E.g.,
+        <cdata char*> are converted into strings, <cdata long> into Python
+        ints, and pointer to structs into their PyFFI equivalent.
+        """
+        raise NotImplementedError
+
+    def from_python(self, obj, ensure_shm=True):
+        """
+        Convert the given Python object into something which can be
+        passed/stored as cdata. This includes the types which cffi handles
+        automatically by itself: e.g., it is fine to return a Python string
+        for a 'char*' ctype.
+
+        If ensure_shm==True, make sure that the returned cdata lives in shared
+        memory (and thus is it suitable to be e.g. stored in a struct.
+
+        If ensure_shm==False, it means that the object is intended to be used
+        only immediately, and only in address space of the current
+        process. E.g., it is useful for doing dictionary lookups in slave
+        processes, where you cannot call GC_malloc.
+        """
+        raise NotImplementedError
+
+
 class Dummy(AbstractConverter):
     def to_python(self, cdata):
         return cdata
 
-    def from_python(self, obj):
+    def from_python(self, obj, ensure_shm=True):
         return obj
 
 class StructPtr(AbstractConverter):
@@ -22,7 +48,7 @@ class StructPtr(AbstractConverter):
     def to_python(self, cdata):
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj):
+    def from_python(self, obj, ensure_shm=True):
         return obj._ptr
 
 class StructByVal(AbstractConverter):
@@ -33,7 +59,7 @@ class StructByVal(AbstractConverter):
     def to_python(self, cdata):
         raise NotImplementedError('Cannot convert struct-by-val to python')
 
-    def from_python(self, obj):
+    def from_python(self, obj, ensure_shm=True):
         return obj._ptr
     
 
@@ -42,8 +68,11 @@ class String(AbstractConverter):
         cdata = self.ffi.cast('char*', cdata) # XXX: integrate with 'force_cast'
         return self.ffi.string(cdata)
 
-    def from_python(self, s):
-        return gclib.new_string(s)
+    def from_python(self, s, ensure_shm=True):
+        if ensure_shm:
+            return gclib.new_string(s)
+        else:
+            return s
 
 class ArrayOfChar(AbstractConverter):
     """
@@ -53,7 +82,7 @@ class ArrayOfChar(AbstractConverter):
     def to_python(self, cdata):
         return self.ffi.string(cdata)
 
-    def from_python(self, s):
+    def from_python(self, s, ensure_shm=True):
         return s
 
 
@@ -61,7 +90,7 @@ class Int(AbstractConverter):
     def to_python(self, cdata):
         return int(cdata)
 
-    def from_python(self, obj):
+    def from_python(self, obj, ensure_shm=True):
         return obj
 
 
