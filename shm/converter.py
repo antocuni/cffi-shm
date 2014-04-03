@@ -1,6 +1,7 @@
 from collections import defaultdict
 import cffi
 from shm import gclib
+from shm.util import ctype_pointer
 
 class AbstractConverter(object):
     def __init__(self, ffi, ctype):
@@ -64,8 +65,12 @@ class StructByVal(AbstractConverter):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
 
-    def to_python_impl(self, cdata):
-        raise NotImplementedError('Cannot convert struct-by-val to python')
+    # note that here we override directly to_python, not to_python_impl
+    def to_python(self, cdata, force_cast=False):
+        if force_cast:
+            ctype_ptr = ctype_pointer(self.ffi, self.ctype)
+            cdata = self.ffi.cast(ctype_ptr, cdata)
+        return self.class_.from_pointer(cdata)
 
     def from_python(self, obj, ensure_shm=True):
         return obj._ptr

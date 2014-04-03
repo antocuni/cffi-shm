@@ -26,3 +26,12 @@ def cffi_is_struct_ptr(ffi, t):
 def cffi_is_struct(ffi, t):
     ctype = cffi_typeof(ffi, t)
     return ctype.kind == 'struct'
+
+def ctype_pointer(ffi, t):
+    # XXX: this is a complete hack! But cffi does not seem to offer an
+    # official way to get the pointer from the ctype
+    ctype = cffi_typeof(ffi, t)
+    s = repr(ctype)
+    assert s.startswith("<ctype '")
+    _, t, _ = s.split("'")
+    return ffi.typeof(t + '*')
