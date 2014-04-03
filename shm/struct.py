@@ -9,7 +9,7 @@ class StructDecorator(object):
     class decorator, to wrap a cffi struct into Python class
     """
 
-    def __init__(self, pyffi, ctype, immutable=False):
+    def __init__(self, pyffi, ctype, immutable=True):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.ctype = cffi_typeof(self.ffi, ctype)

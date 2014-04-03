@@ -21,7 +21,7 @@ ffi.cdef("""
 def test_immutable_struct():
     pyffi = PyFFI(ffi)
     
-    @pyffi.struct('Point*', immutable=True)
+    @pyffi.struct('Point*')
     class Point(object):
         def hypot(self):
             import math
@@ -41,7 +41,7 @@ def test_immutable_struct():
 def test_mutable_struct():
     pyffi = PyFFI(ffi)    
     
-    @pyffi.struct('Point*')
+    @pyffi.struct('Point*', immutable=False)
     class Point(object):
         def hypot(self):
             import math
@@ -59,7 +59,7 @@ def test_mutable_struct():
 def test_override_init():
     pyffi = PyFFI(ffi)
 
-    @pyffi.struct('Point*', immutable=True)
+    @pyffi.struct('Point*')
     class Point(object):
         def __init__(self):
             self._init(x=1, y=2)
@@ -72,11 +72,11 @@ def test_override_init():
 def test_nested_struct():
     pyffi = PyFFI(ffi)
 
-    @pyffi.struct('Point*')
+    @pyffi.struct('Point*', immutable=False)
     class Point(object):
         pass
 
-    @pyffi.struct('Rectangle*')
+    @pyffi.struct('Rectangle*', immutable=False)
     class Rectangle(object):
         pass
 
@@ -92,7 +92,7 @@ def test_nested_struct():
 def test_equality_hash():
     pyffi = PyFFI(ffi)
 
-    @pyffi.struct('Point*', immutable=True)
+    @pyffi.struct('Point*')
     class Point(object):
         pass
 
