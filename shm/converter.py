@@ -1,7 +1,7 @@
 from collections import defaultdict
 import cffi
 from shm import gclib
-from shm.util import ctype_pointer
+from shm.util import ctype_pointer_to, ctype_array_of
 
 class AbstractConverter(object):
     def __init__(self, ffi, ctype):
@@ -68,7 +68,7 @@ class StructByVal(AbstractConverter):
     # note that here we override directly to_python, not to_python_impl
     def to_python(self, cdata, force_cast=False):
         if force_cast:
-            ctype_ptr = ctype_pointer(self.ffi, self.ctype)
+            ctype_ptr = ctype_pointer_to(self.ffi, self.ctype)
             cdata = self.ffi.cast(ctype_ptr, cdata)
         return self.class_.from_pointer(cdata)
 
@@ -91,17 +91,29 @@ class ArrayOfChar(AbstractConverter):
     Like StringConverter, but it does not need to GC-allocate a new string
     when converting from python, because the data will be copied anyway
     """
-    def to_python(self, cdata):
+    def to_python_impl(self, cdata):
         return self.ffi.string(cdata)
 
     def from_python(self, s, ensure_shm=True):
         return s
 
+class Primitive(AbstractConverter):
+    """
+    cffi already knows how to convert primitive cdata to Python objects,
+    e.g. by converting 'long' to Python ints and 'double' to Python floats.
 
-class Int(AbstractConverter):
-    def to_python(self, cdata):
-        return int(cdata)
+    However, it does not offert a direct API to do the conversion, so instead
+    we store to a buffer and read them again.
+    """
+
+    def __init__(self, ffi, ctype):
+        AbstractConverter.__init__(self, ffi, ctype)
+        array_type = ctype_array_of(ffi, ctype)
+        self.buf = ffi.new(array_type, 1)
+
+    def to_python_impl(self, cdata):
+        self.buf[0] = cdata
+        return self.buf[0]
 
     def from_python(self, obj, ensure_shm=True):
         return obj
-

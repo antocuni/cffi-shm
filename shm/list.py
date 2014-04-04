@@ -1,7 +1,7 @@
 import cffi
 import _cffi_backend
 from shm import gclib
-from shm.util import ctype_pointer
+from shm.util import ctype_pointer_to
 
 listffi = cffi.FFI()
 
@@ -18,7 +18,7 @@ class ListType(object):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
-        self.itemtype_ptr = ctype_pointer(self.ffi, itemtype)
+        self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
 
     def __repr__(self):
         return '<shm type list [%s]>' % self.itemtype

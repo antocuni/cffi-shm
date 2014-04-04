@@ -40,8 +40,7 @@ class PyFFI(object):
             return converter.String(self.ffi, ctype)
         elif cffi_is_char_array(self.ffi, t):
             return converter.ArrayOfChar(self.ffi, ctype)
-        elif ctype == self.ffi.typeof('long'):
-            # XXX: this must be converted into a more general PrimitiveConverter
-            return converter.Int(self.ffi, ctype)
+        elif ctype.kind == 'primitive':
+            return converter.Primitive(self.ffi, ctype)
         else:
             return converter.Dummy(self.ffi, ctype)
