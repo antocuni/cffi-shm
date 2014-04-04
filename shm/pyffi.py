@@ -8,6 +8,7 @@ class PyFFI(object):
     def __init__(self, ffi):
         self.ffi = ffi
         self.pytypes = {} # ctype --> python class
+        self._converters = {}
 
     def pytypeof(self, t):
         ctype = cffi_typeof(self.ffi, t)
@@ -26,19 +27,31 @@ class PyFFI(object):
 
     def get_converter(self, t, allow_structs_byval=False):
         ctype = cffi_typeof(self.ffi, t)
+        if ctype.kind == 'struct':
+            key = (ctype, allow_structs_byval)
+        else:
+            key = (ctype,)
+        try:
+            return self._converters[key]
+        except KeyError:
+            conv = self._new_converter(ctype, allow_structs_byval)
+            self._converters[key] = conv
+            return conv
+
+    def _new_converter(self, ctype, allow_structs_byval):
         if cffi_is_struct_ptr(self.ffi, ctype):
-            cls = self.pytypeof(t)
+            cls = self.pytypeof(ctype)
             return converter.StructPtr(self.ffi, ctype, cls)
         elif ctype.kind == 'struct':
             if not allow_structs_byval:
                 msg = ("structs byval are not allowed by default. You need to use a "
                        "pointer to a struct, or specify allow_structs_byval=True")
                 raise ValueError(msg)
-            cls = self.pytypeof(t)
+            cls = self.pytypeof(ctype)
             return converter.StructByVal(self.ffi, ctype, cls)
         if cffi_is_string(self.ffi, ctype):
             return converter.String(self.ffi, ctype)
-        elif cffi_is_char_array(self.ffi, t):
+        elif cffi_is_char_array(self.ffi, ctype):
             return converter.ArrayOfChar(self.ffi, ctype)
         elif ctype.kind == 'primitive':
             return converter.Primitive(self.ffi, ctype)
