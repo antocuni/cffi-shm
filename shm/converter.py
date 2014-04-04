@@ -105,16 +105,3 @@ class Int(AbstractConverter):
     def from_python(self, obj, ensure_shm=True):
         return obj
 
-
-# ==========================================================
-# XXX: to be killed and integrated with pyffi.get_converter
-
-_ffi = cffi.FFI()
-_converter = defaultdict(lambda: Dummy)
-_converter[_ffi.typeof('char*')] = String
-_converter[_ffi.typeof('long')] = Int
-
-def get_converter(ffi, t):
-    ctype = ffi.typeof(t)
-    cls = _converter[ctype]
-    return cls(ffi, ctype)
