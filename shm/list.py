@@ -1,6 +1,7 @@
 import cffi
 import _cffi_backend
 from shm import gclib
+from shm.util import ctype_pointer
 
 listffi = cffi.FFI()
 
@@ -12,46 +13,53 @@ listffi.cdef("""
     } List;
 """)
 
-class List(object):
+class ListType(object):
+    def __init__(self, pyffi, itemtype):
+        self.pyffi = pyffi
+        self.ffi = pyffi.ffi
+        self.itemtype = itemtype
+        self.itemtype_ptr = ctype_pointer(self.ffi, itemtype)
 
-    def __init__(self, ffi, itemtype, items=None, root=False):
+    def __repr__(self):
+        return '<shm type list [%s]>' % self.itemtype
+
+    def __call__(self, items=None, root=False):
+        with gclib.disabled:
+            ptr = gclib.new(listffi, 'List*', root)
+            # even for empty lists, we start by allocating 2 items, and then
+            # growing
+            ptr.items = gclib.new_array(self.ffi, self.itemtype, 2)
+            ptr.size = 2
+            ptr.length = 0
+        lst = ListInstance(self, ptr)
+        lst._setcontent(items)
+        return lst
+
+    def from_pointer(self, ptr):
+        ptr = listffi.cast('List*', ptr)
+        return ListInstance(self, ptr)
+
+
+class ListInstance(object):
+
+    def __init__(self, listtype, lst):
         """
         itemtype must be a valid ffi type, such as 'long' or 'void*'
         """
-        self.ffi = ffi
-        self.itemtype = itemtype
-        self.itemtype_ptr = _cffi_backend.new_pointer_type(ffi.typeof(itemtype))
-        self.lst = self._allocate(root)
-        self._setcontent(items)
-
-    @classmethod
-    def from_pointer(cls, ffi, itemtype, ptr):
-        self = cls.__new__(cls)
-        self.ffi = ffi
-        self.itemtype = itemtype
-        self.itemtype_ptr = _cffi_backend.new_pointer_type(ffi.typeof(itemtype))
-        self.lst = listffi.cast('List*', ptr)
-        return self
+        self.listtype = listtype
+        self.lst = lst
 
     @property
     def typeditems(self):
-        return self.ffi.cast(self.itemtype_ptr, self.lst.items)
-
-    def _allocate(self, root):
-        with gclib.disabled:
-            lst = gclib.new(listffi, 'List*', root)
-            # even for empty lists, we start by allocating 2 items, and then
-            # growing
-            lst.items = gclib.new_array(self.ffi, self.itemtype, 2)
-            lst.size = 2
-            lst.length = 0
-        return lst
+        t = self.listtype
+        return t.ffi.cast(t.itemtype_ptr, self.lst.items)
 
     def _grow(self, newsize):
+        t = self.listtype
         lst = self.lst
         if newsize <= lst.size:
             return
-        lst.items = gclib.realloc_array(self.ffi, self.itemtype, lst.items, newsize)
+        lst.items = gclib.realloc_array(t.ffi, t.itemtype, lst.items, newsize)
         lst.size = newsize
 
     def append(self, item):

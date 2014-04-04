@@ -5,7 +5,7 @@ import cffi
 import shm
 from shm import gclib
 from shm.sharedmem import SharedMemory
-from shm.list import List
+from shm.list import ListType
 from shm.dict import DictType
 from shm.pyffi import PyFFI
 
@@ -61,16 +61,20 @@ def test_list(tmpdir):
     def child(path, address, size, list_addr):
         import cffi
         from shm.sharedmem import SharedMemory
-        from shm.list import List
+        from shm.pyffi import PyFFI
+        from shm.list import ListType
         #
-        ffi = cffi.FFI()
+        pyffi = PyFFI(cffi.FFI())
         mem = SharedMemory.open(path)
-        lst = List.from_pointer(ffi, 'long', list_addr)
+        LT = ListType(pyffi, 'long')
+        lst = LT.from_pointer(list_addr)
         assert list(lst) == range(100)
 
+    pyffi = PyFFI(ffi)
     base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
     size = gclib.lib.GC_get_memsize()
-    lst = List(ffi, 'long', range(100), root=True)
+    LT = ListType(pyffi, 'long')
+    lst = LT(range(100), root=True)
     list_addr = int(ffi.cast('long', lst.lst))
     assert exec_child(tmpdir, child, PATH, base_addr, size, list_addr)
 
