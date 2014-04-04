@@ -3,6 +3,9 @@ from shm import converter
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity)
 
+class AbstractGenericType(object):
+    pass
+
 
 class PyFFI(object):
     def __init__(self, ffi):
@@ -41,7 +44,10 @@ class PyFFI(object):
     def _new_converter(self, ctype, allow_structs_byval):
         if cffi_is_struct_ptr(self.ffi, ctype):
             cls = self.pytypeof(ctype)
-            return converter.StructPtr(self.ffi, ctype, cls)
+            if isinstance(cls, AbstractGenericType):
+                return converter.GenericTypePtr(self.ffi, ctype, cls)
+            else:
+                return converter.StructPtr(self.ffi, ctype, cls)
         elif ctype.kind == 'struct':
             if not allow_structs_byval:
                 msg = ("structs byval are not allowed by default. You need to use a "
@@ -57,3 +63,4 @@ class PyFFI(object):
             return converter.Primitive(self.ffi, ctype)
         else:
             return converter.Dummy(self.ffi, ctype)
+

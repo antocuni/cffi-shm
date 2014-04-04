@@ -23,6 +23,7 @@ class StructDecorator(object):
         cls.ctype = self.ctype
         self.add_ctor(cls)
         cls.from_pointer = classmethod(from_pointer)
+        cls.as_cdata = as_cdata
         if self.immutable:
             self.add_key(cls)
             cls.__hash__ = __hash__
@@ -104,7 +105,7 @@ class StructDecorator(object):
 
 # this is used by setters
 def to_pointer(obj):
-    return obj._ptr
+    return obj.as_cdata()
 
 # these are attached to all struct classes
 def from_pointer(cls, ptr):
@@ -114,6 +115,9 @@ def from_pointer(cls, ptr):
     self = cls.__new__(cls)
     self._ptr = ptr
     return self
+
+def as_cdata(self):
+    return self._ptr
 
 def __hash__(self):
     return hash(self._key())

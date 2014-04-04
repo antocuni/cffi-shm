@@ -137,3 +137,27 @@ def test_array_of_chars():
     p = Person('Foobar')
     assert p.name == 'Foobar'
     assert ffi.string(p._ptr.name) == 'Foobar'
+
+
+def test_list_field():
+    from shm.list import ListType, FixedSizeListInstance
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct LongList LongList;
+        typedef struct {
+            LongList* mylist;
+        } MyStruct;
+    """)
+    pyffi = PyFFI(ffi)
+
+    LongList = ListType(pyffi, 'long')
+    pyffi.register('LongList*', LongList)
+
+    @pyffi.struct('MyStruct*')
+    class MyStruct(object):
+        pass
+
+    mylist = LongList(range(5))
+    obj = MyStruct(mylist)
+    assert isinstance(obj.mylist, FixedSizeListInstance)
+    assert list(obj.mylist) == range(5)

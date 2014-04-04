@@ -3,6 +3,7 @@ import _cffi_backend
 from shm import gclib
 from shm.converter import Dummy
 from shm.util import ctype_pointer_to, cffi_typeof
+from shm.pyffi import AbstractGenericType
 
 listffi = cffi.FFI()
 
@@ -14,7 +15,8 @@ listffi.cdef("""
     } List;
 """)
 
-class ListType(object):
+class ListType(AbstractGenericType):
+
     def __init__(self, pyffi, itemtype, fixedsize=True):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
@@ -63,6 +65,9 @@ class FixedSizeListInstance(object):
         """
         self.listtype = listtype
         self.lst = lst
+
+    def as_cdata(self):
+        return self.lst
 
     @property
     def typeditems(self):
