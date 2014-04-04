@@ -15,11 +15,17 @@ listffi.cdef("""
 """)
 
 class ListType(object):
-    def __init__(self, pyffi, itemtype):
+    def __init__(self, pyffi, itemtype, fixedsize=True):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
+        self.fixedsize = fixedsize
+        if fixedsize:
+            self.listclass = FixedSizeListInstance
+        else:
+            print 'WARNING: non-fixedsize shm lists are not yet thread-safe'
+            self.listclass = ListInstance
         #
         # if it's a primitive we do not need a converter, because the
         # conversion is already performed automatically by typeditems, which
@@ -40,16 +46,16 @@ class ListType(object):
             ptr.items = gclib.new_array(self.ffi, self.itemtype, 2)
             ptr.size = 2
             ptr.length = 0
-        lst = ListInstance(self, ptr)
+        lst = self.listclass(self, ptr)
         lst._setcontent(items)
         return lst
 
     def from_pointer(self, ptr):
         ptr = listffi.cast('List*', ptr)
-        return ListInstance(self, ptr)
+        return self.listclass(self, ptr)
 
 
-class ListInstance(object):
+class FixedSizeListInstance(object):
 
     def __init__(self, listtype, lst):
         """
@@ -70,14 +76,6 @@ class ListInstance(object):
             return
         lst.items = gclib.realloc_array(t.ffi, t.itemtype, lst.items, newsize)
         lst.size = newsize
-
-    def append(self, item):
-        lst = self.lst
-        if lst.size <= lst.length:
-            self._grow(lst.size*2)
-        n = lst.length
-        lst.length = n+1
-        self._setitem(n, item)
 
     def _setitem(self, n, item):
         item = self.listtype.conv.from_python(item)
@@ -118,3 +116,12 @@ class ListInstance(object):
             yield self._getitem(i)
             i += 1
 
+class ListInstance(FixedSizeListInstance):
+
+    def append(self, item):
+        lst = self.lst
+        if lst.size <= lst.length:
+            self._grow(lst.size*2)
+        n = lst.length
+        lst.length = n+1
+        self._setitem(n, item)

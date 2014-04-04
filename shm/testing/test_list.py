@@ -17,7 +17,7 @@ def test_newlist(pyffi):
     assert len(l) == 0
 
 def test_append(pyffi):
-    LT = ListType(pyffi, 'long')
+    LT = ListType(pyffi, 'long', fixedsize=False)
     l = LT()
     l.append(42)
     assert len(l) == 1
@@ -27,7 +27,7 @@ def test_append(pyffi):
     assert l.typeditems[1] == 43
 
 def test_growing(pyffi):
-    LT = ListType(pyffi, 'long')
+    LT = ListType(pyffi, 'long', fixedsize=False)
     l = LT()
     l.append(42)
     l.append(43)
@@ -99,8 +99,13 @@ def test_list_of_structs(pyffi):
     LT = ListType(pyffi, 'Point*')
     p1 = Point(1, 2)
     p2 = Point(3, 4)
-    lst = LT()
-    lst.append(p1)
-    lst.append(p2)
+    lst = LT([p1, p2])
     assert lst[0] == p1
     assert lst[1] == p2
+
+def test_fixed_size_list(pyffi):
+    LT = ListType(pyffi, 'long', fixedsize=True)
+    l = LT(range(5))
+    assert l[0] == 0
+    assert l[4] == 4
+    py.test.raises(AttributeError, "l.append(5)")
