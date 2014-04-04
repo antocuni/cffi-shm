@@ -84,3 +84,23 @@ def test_from_pointer(pyffi):
     assert list(l2) == range(5)
     l2[0] = 42
     assert l[0] == 42
+
+def test_list_of_structs(pyffi):
+    ffi = pyffi.ffi
+    ffi.cdef("""
+        typedef struct {
+            int x;
+            int y;
+        } Point;
+    """)
+    @pyffi.struct('Point*')
+    class Point(object):
+        pass
+    LT = ListType(pyffi, 'Point*')
+    p1 = Point(1, 2)
+    p2 = Point(3, 4)
+    lst = LT()
+    lst.append(p1)
+    lst.append(p2)
+    assert lst[0] == p1
+    assert lst[1] == p2

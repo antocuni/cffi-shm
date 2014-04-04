@@ -1,7 +1,8 @@
 import cffi
 import _cffi_backend
 from shm import gclib
-from shm.util import ctype_pointer_to
+from shm.converter import Dummy
+from shm.util import ctype_pointer_to, cffi_typeof
 
 listffi = cffi.FFI()
 
@@ -19,6 +20,14 @@ class ListType(object):
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
+        #
+        # if it's a primitive we do not need a converter, because the
+        # conversion is already performed automatically by typeditems, which
+        # is a typed cffi array
+        if cffi_typeof(self.ffi, itemtype).kind == 'primitive':
+            self.conv = Dummy(self.ffi, itemtype)
+        else:
+            self.conv = pyffi.get_converter(itemtype)
 
     def __repr__(self):
         return '<shm type list [%s]>' % self.itemtype
@@ -71,7 +80,12 @@ class ListInstance(object):
         self._setitem(n, item)
 
     def _setitem(self, n, item):
+        item = self.listtype.conv.from_python(item)
         self.typeditems[n] = item
+
+    def _getitem(self, n):
+        item = self.typeditems[n]
+        return self.listtype.conv.to_python(item)
 
     def _setcontent(self, items):
         if items is not None:
@@ -92,15 +106,15 @@ class ListInstance(object):
 
     def __getitem__(self, i):
         i = self._getindex(i)
-        return self.typeditems[i]
+        return self._getitem(i)
 
     def __setitem__(self, i, item):
         i = self._getindex(i)
-        self.typeditems[i] = item
+        self._setitem(i, item)
 
     def __iter__(self):
         i = 0
         while i < self.lst.length:
-            yield self.typeditems[i]
+            yield self._getitem(i)
             i += 1
 
