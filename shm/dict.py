@@ -1,6 +1,7 @@
 import py
 import cffi
 from shm import gclib
+from shm.pyffi import AbstractGenericType
 from shm.util import cffi_is_string, cffi_is_struct_ptr, cffi_is_struct
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
@@ -47,7 +48,7 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
-class DictType(object):
+class DictType(AbstractGenericType):
     def __init__(self, pyffi, keytype, valuetype):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
@@ -98,6 +99,9 @@ class DictInstance(object):
         return '<shm dict [%s: %s] at 0x%x>' % (self.dictype.keytype,
                                                 self.dictype.valuetype,
                                                 addr)
+
+    def as_cdata(self):
+        return self.ht
 
     def _key(self, key):
         return self.dictype.keyconverter.from_python(key, ensure_shm=False)

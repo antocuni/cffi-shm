@@ -161,3 +161,30 @@ def test_list_field():
     obj = MyStruct(mylist)
     assert isinstance(obj.mylist, FixedSizeListInstance)
     assert list(obj.mylist) == range(5)
+
+
+def test_dict_field():
+    from shm.dict import DictType, DictInstance
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct PersonDB PersonDB;
+        typedef struct {
+            PersonDB* db;
+        } MyStruct;
+    """)
+    pyffi = PyFFI(ffi)
+
+    PersonDB = DictType(pyffi, 'const char*', 'long')
+    pyffi.register('PersonDB*', PersonDB)
+
+    @pyffi.struct('MyStruct*')
+    class MyStruct(object):
+        pass
+
+    db = PersonDB()
+    db['foo'] = 32
+    db['bar'] = 42
+    obj = MyStruct(db)
+    assert isinstance(obj.db, DictInstance)
+    assert obj.db['foo'] == 32
+    assert obj.db['bar'] == 42
