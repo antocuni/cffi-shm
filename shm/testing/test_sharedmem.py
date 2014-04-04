@@ -11,7 +11,6 @@ from shm.pyffi import PyFFI
 
 PATH = '/cffi-shm-testing'
 gclib.init(PATH)
-ffi = cffi.FFI()
 
 def exec_child(tmpdir, fn, *args):
     rootdir = py.path.local(shm.__file__).dirpath('..')
@@ -41,7 +40,7 @@ def test_exec_child(tmpdir):
             
             
 def test_sharedmem(tmpdir):
-    def child(path, address, size, str_addr):
+    def child(path, str_addr):
         import cffi
         from shm.sharedmem import SharedMemory
         #
@@ -50,15 +49,14 @@ def test_sharedmem(tmpdir):
         rawstr = ffi.cast('char*', str_addr)
         assert ffi.string(rawstr) == 'hello world'
 
-    base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
-    size = gclib.lib.GC_get_memsize()
+    ffi = cffi.FFI()
     rawstr = gclib.new_string('hello world', root=True)
     str_addr = int(ffi.cast('long', rawstr))
-    assert exec_child(tmpdir, child, PATH, base_addr, size, str_addr)
+    assert exec_child(tmpdir, child, PATH, str_addr)
 
 
 def test_list(tmpdir):
-    def child(path, address, size, list_addr):
+    def child(path, list_addr):
         import cffi
         from shm.sharedmem import SharedMemory
         from shm.pyffi import PyFFI
@@ -70,17 +68,16 @@ def test_list(tmpdir):
         lst = LT.from_pointer(list_addr)
         assert list(lst) == range(100)
 
+    ffi = cffi.FFI()
     pyffi = PyFFI(ffi)
-    base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
-    size = gclib.lib.GC_get_memsize()
     LT = ListType(pyffi, 'long')
     lst = LT(range(100), root=True)
     list_addr = int(ffi.cast('long', lst.lst))
-    assert exec_child(tmpdir, child, PATH, base_addr, size, list_addr)
+    assert exec_child(tmpdir, child, PATH, list_addr)
 
 
 def test_dict(tmpdir):
-    def child(path, address, size, dict_addr):
+    def child(path, dict_addr):
         import cffi
         from shm.sharedmem import SharedMemory
         from shm.pyffi import PyFFI
@@ -94,12 +91,11 @@ def test_dict(tmpdir):
         assert d['world'] == 2
         assert sorted(d.keys()) == ['hello', 'world']
 
+    ffi = cffi.FFI()
     pyffi = PyFFI(ffi)
-    base_addr = int(ffi.cast('long', gclib.lib.GC_get_memory()))
-    size = gclib.lib.GC_get_memsize()
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT(root=True)
     d['hello'] = 1
     d['world'] = 2
     dict_addr = int(ffi.cast('long', d.ht))
-    assert exec_child(tmpdir, child, PATH, base_addr, size, dict_addr)
+    assert exec_child(tmpdir, child, PATH, dict_addr)
