@@ -9,9 +9,12 @@ def make_struct(pyffi, ctype, immutable=True):
     else:
         base = BaseStruct
 
-    @StructDecorator(pyffi, ctype, immutable)
+    decorate = StructDecorator(pyffi, ctype, immutable)
     class MyStruct(base):
-        pass
+        class __metaclass__(type):
+            def __init__(cls, name, bases, dic):
+                cls = decorate(cls)
+                pyffi.register(ctype, cls)
 
     MyStruct.__name__ = ctype.item.cname
     return MyStruct

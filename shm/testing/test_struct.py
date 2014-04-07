@@ -45,17 +45,12 @@ def test_mutable_struct():
 
 
 def test_inheritance():
-    # note that in this test we register the class manually, but the end user
-    # is not meant to do so. Instead, it should inherit from pyffi.Struct or
-    # pyffi.ImmutableStruct
-    
     pyffi = PyFFI(ffi)
-    class Point(pyffi.struct('Point*', register=False)):
+    class Point(pyffi.struct('Point*')):
         def hypot(self):
             import math
             return math.sqrt(self.x**2 + self.y**2)
     #
-    pyffi.register('Point*', Point)
     assert pyffi.pytypeof('Point*') is Point
     p = Point(x=3, y=4)
     assert p.x == 3
@@ -64,7 +59,7 @@ def test_inheritance():
 
 def test_override_init():
     pyffi = PyFFI(ffi)
-    class Point(pyffi.struct('Point*', register=False)):
+    class Point(pyffi.struct('Point*')):
         def __init__(self):
             self._init(x=1, y=2)
     #

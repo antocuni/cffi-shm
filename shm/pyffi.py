@@ -30,11 +30,9 @@ class PyFFI(object):
         if cffi_is_struct_ptr(self.ffi, ctype):
             self.pytypes[ctype.item] = pytype
 
-    def struct(self, t, register=True, **kwds):
+    def struct(self, t, **kwds):
         ctype = cffi_typeof(self.ffi, t)
         cls = make_struct(self, ctype, **kwds)
-        if register:
-            self.register(ctype, cls)
         return cls
 
     def get_converter(self, t, allow_structs_byval=False):
