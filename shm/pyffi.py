@@ -26,10 +26,6 @@ class PyFFI(object):
                                 "been registered as %s" % (t, self.pytypes[ctype]))
         self.pytypes[ctype] = pytype
 
-        # XXX
-        if cffi_is_struct_ptr(self.ffi, ctype):
-            self.pytypes[ctype.item] = pytype
-
     def struct(self, t, **kwds):
         ctype = cffi_typeof(self.ffi, t)
         cls = make_struct(self, ctype, **kwds)

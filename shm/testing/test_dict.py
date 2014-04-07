@@ -104,7 +104,7 @@ def test_key_struct_byval(pyffi):
         } FullName;
     """)
 
-    class FullName(pyffi.struct('FullName*')):
+    class FullName(pyffi.struct('FullName')):
         # this is needed for 'sorted' below
         def __cmp__(self, other):
             return cmp(self._key(), other._key())
@@ -135,7 +135,7 @@ def test_key_struct_byptr(pyffi):
         } FullName;
     """)
 
-    class FullName(pyffi.struct('FullName*')):
+    class FullName(pyffi.struct('FullName')):
         # this is needed for 'sorted' below
         def __cmp__(self, other):
             return cmp(self._key(), other._key())

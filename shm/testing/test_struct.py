@@ -20,8 +20,9 @@ ffi.cdef("""
 
 def test_immutable_struct():
     pyffi = PyFFI(ffi)
-    Point = pyffi.struct('Point*')
+    Point = pyffi.struct('Point')
     assert isinstance(Point, type)
+    assert pyffi.pytypeof('Point') is Point
     assert pyffi.pytypeof('Point*') is Point
     p = Point(x=3, y=4)
     assert p.x == 3
@@ -34,7 +35,7 @@ def test_immutable_struct():
 
 def test_mutable_struct():
     pyffi = PyFFI(ffi)
-    Point = pyffi.struct('Point*', immutable=False)
+    Point = pyffi.struct('Point', immutable=False)
     p = Point(x=3, y=4)
     assert p.x == 3
     assert p.y == 4
@@ -46,7 +47,7 @@ def test_mutable_struct():
 
 def test_inheritance():
     pyffi = PyFFI(ffi)
-    class Point(pyffi.struct('Point*')):
+    class Point(pyffi.struct('Point')):
         def hypot(self):
             import math
             return math.sqrt(self.x**2 + self.y**2)
@@ -59,7 +60,7 @@ def test_inheritance():
 
 def test_override_init():
     pyffi = PyFFI(ffi)
-    class Point(pyffi.struct('Point*')):
+    class Point(pyffi.struct('Point')):
         def __init__(self):
             self._init(x=1, y=2)
     #
@@ -71,8 +72,8 @@ def test_override_init():
 def test_nested_struct():
     pyffi = PyFFI(ffi)
 
-    Point = pyffi.struct('Point*', immutable=False)
-    Rectangle = pyffi.struct('Rectangle*', immutable=False)
+    Point = pyffi.struct('Point', immutable=False)
+    Rectangle = pyffi.struct('Rectangle', immutable=False)
 
     p1 = Point(1, 2)
     p2 = Point(3, 4)
@@ -85,7 +86,7 @@ def test_nested_struct():
 
 def test_equality_hash():
     pyffi = PyFFI(ffi)
-    Point = pyffi.struct('Point*')
+    Point = pyffi.struct('Point')
     p1 = Point(1, 2)
     p2 = Point(1, 2)
     assert hash(p1) == hash(p2)
@@ -101,7 +102,7 @@ def test_string():
         } Person;
     """)
     pyffi = PyFFI(ffi)
-    Person = pyffi.struct('Person*')
+    Person = pyffi.struct('Person')
     p = Person('Foobar')
     assert p.name == 'Foobar'
     assert gclib.isptr(p._ptr.name)
@@ -115,7 +116,7 @@ def test_array_of_chars():
         } Person;
     """)
     pyffi = PyFFI(ffi)
-    Person = pyffi.struct('Person*')
+    Person = pyffi.struct('Person')
     p = Person('Foobar')
     assert p.name == 'Foobar'
     assert ffi.string(p._ptr.name) == 'Foobar'
@@ -134,7 +135,7 @@ def test_list_field():
 
     LongList = ListType(pyffi, 'long')
     pyffi.register('LongList*', LongList)
-    MyStruct = pyffi.struct('MyStruct*')
+    MyStruct = pyffi.struct('MyStruct')
     #
     mylist = LongList(range(5))
     obj = MyStruct(mylist)
@@ -155,7 +156,7 @@ def test_dict_field():
 
     PersonDB = DictType(pyffi, 'const char*', 'long')
     pyffi.register('PersonDB*', PersonDB)
-    MyStruct = pyffi.struct('MyStruct*')
+    MyStruct = pyffi.struct('MyStruct')
     #
     db = PersonDB()
     db['foo'] = 32

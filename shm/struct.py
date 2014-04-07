@@ -1,17 +1,20 @@
 import py
 from shm import gclib
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
-                      cffi_is_char_array, compile_def, identity)
+                      cffi_is_char_array, compile_def, identity, ctype_pointer_to)
 
 def make_struct(pyffi, ctype, immutable=True):
-    decorate = StructDecorator(pyffi, ctype, immutable)
+    struct_ctype = ctype
+    ptr_ctype = ctype_pointer_to(pyffi.ffi, ctype)
+    decorate = StructDecorator(pyffi, ptr_ctype, immutable)
     class MyStruct(BaseStruct):
         class __metaclass__(type):
             def __init__(cls, name, bases, dic):
                 cls = decorate(cls)
-                pyffi.register(ctype, cls)
+                pyffi.register(struct_ctype, cls)
+                pyffi.register(ptr_ctype, cls)
 
-    MyStruct.__name__ = ctype.item.cname
+    MyStruct.__name__ = struct_ctype.cname
     return MyStruct
 
 
