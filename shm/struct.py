@@ -3,10 +3,50 @@ from shm import gclib
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity)
 
+def make_struct(pyffi, ctype, immutable=True):
+    if immutable:
+        base = BaseImmutableStruct
+    else:
+        base = BaseStruct
+
+    @StructDecorator(pyffi, ctype, immutable)
+    class MyStruct(base):
+        pass
+
+    MyStruct.__name__ = ctype.item.cname
+    return MyStruct
+
+
+class BaseStruct(object):
+
+    @classmethod
+    def from_pointer(cls, ptr):
+        ffi = cls.pyffi.ffi
+        if cls.ctype != ffi.typeof(ptr):
+            raise TypeError("Expected %s, got %s" % (cls.ctype, ffi.typeof(ptr)))
+        self = cls.__new__(cls)
+        self._ptr = ptr
+        return self
+
+    def as_cdata(self):
+        return self._ptr
+
+class BaseImmutableStruct(BaseStruct):
+
+    def __hash__(self):
+        return hash(self._key())
+
+    def __eq__(self, other):
+        return self._key() == other._key()
+
+    def _key(self):
+        raise NotImplementedError
+
 
 class StructDecorator(object):
     """
-    class decorator, to wrap a cffi struct into Python class
+    class decorator, to wrap a cffi struct into Python class. The class is
+    expected to be a subclass of BaseStruct
     """
 
     def __init__(self, pyffi, ctype, immutable=True):
@@ -22,16 +62,11 @@ class StructDecorator(object):
         cls.pyffi = self.pyffi
         cls.ctype = self.ctype
         self.add_ctor(cls)
-        cls.from_pointer = classmethod(from_pointer)
-        cls.as_cdata = as_cdata
         if self.immutable:
             self.add_key(cls)
-            cls.__hash__ = __hash__
-            cls.__eq__ = __eq__
         #
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
-        self.pyffi.register(self.ctype, cls)
         return cls
 
     def add_ctor(self, cls):
@@ -101,26 +136,3 @@ class StructDecorator(object):
         fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
-
-
-# this is used by setters
-def to_pointer(obj):
-    return obj.as_cdata()
-
-# these are attached to all struct classes
-def from_pointer(cls, ptr):
-    ffi = cls.pyffi.ffi
-    if cls.ctype != ffi.typeof(ptr):
-        raise TypeError("Expected %s, got %s" % (cls.ctype, ffi.typeof(ptr)))
-    self = cls.__new__(cls)
-    self._ptr = ptr
-    return self
-
-def as_cdata(self):
-    return self._ptr
-
-def __hash__(self):
-    return hash(self._key())
-
-def __eq__(self, other):
-    return self._key() == other._key()

@@ -1,4 +1,4 @@
-from shm.struct import StructDecorator
+from shm.struct import make_struct
 from shm import converter
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity)
@@ -24,9 +24,12 @@ class PyFFI(object):
         if cffi_is_struct_ptr(self.ffi, ctype):
             self.pytypes[ctype.item] = pytype
 
-    def struct(self, t, **kwds):
+    def struct(self, t, register=True, **kwds):
         ctype = cffi_typeof(self.ffi, t)
-        return StructDecorator(self, ctype, **kwds)
+        cls = make_struct(self, ctype, **kwds)
+        if register:
+            self.register(ctype, cls)
+        return cls
 
     def get_converter(self, t, allow_structs_byval=False):
         ctype = cffi_typeof(self.ffi, t)

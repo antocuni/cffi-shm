@@ -93,9 +93,7 @@ def test_list_of_structs(pyffi):
             int y;
         } Point;
     """)
-    @pyffi.struct('Point*')
-    class Point(object):
-        pass
+    Point = pyffi.struct('Point*')
     LT = ListType(pyffi, 'Point*')
     p1 = Point(1, 2)
     p2 = Point(3, 4)

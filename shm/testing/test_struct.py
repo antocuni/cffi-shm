@@ -20,18 +20,12 @@ ffi.cdef("""
 
 def test_immutable_struct():
     pyffi = PyFFI(ffi)
-    
-    @pyffi.struct('Point*')
-    class Point(object):
-        def hypot(self):
-            import math
-            return math.sqrt(self.x**2 + self.y**2)
-    #
+    Point = pyffi.struct('Point*')
+    assert isinstance(Point, type)
     assert pyffi.pytypeof('Point*') is Point
     p = Point(x=3, y=4)
     assert p.x == 3
     assert p.y == 4
-    assert p.hypot() == 5
     py.test.raises(AttributeError, "p.x = 0")
     py.test.raises(AttributeError, "p.y = 0")
     #
@@ -39,28 +33,38 @@ def test_immutable_struct():
     assert p.x == 0
 
 def test_mutable_struct():
-    pyffi = PyFFI(ffi)    
-    
-    @pyffi.struct('Point*', immutable=False)
-    class Point(object):
-        def hypot(self):
-            import math
-            return math.sqrt(self.x**2 + self.y**2)
-    #
+    pyffi = PyFFI(ffi)
+    Point = pyffi.struct('Point*', immutable=False)
     p = Point(x=3, y=4)
     assert p.x == 3
     assert p.y == 4
-    assert p.hypot() == 5
     assert p._ptr.x == 3
     p.x = 0
     p.y = 0
     assert p._ptr.x == 0
 
+
+def test_inheritance():
+    # note that in this test we register the class manually, but the end user
+    # is not meant to do so. Instead, it should inherit from pyffi.Struct or
+    # pyffi.ImmutableStruct
+    
+    pyffi = PyFFI(ffi)
+    class Point(pyffi.struct('Point*', register=False)):
+        def hypot(self):
+            import math
+            return math.sqrt(self.x**2 + self.y**2)
+    #
+    pyffi.register('Point*', Point)
+    assert pyffi.pytypeof('Point*') is Point
+    p = Point(x=3, y=4)
+    assert p.x == 3
+    assert p.y == 4
+    assert p.hypot() == 5
+
 def test_override_init():
     pyffi = PyFFI(ffi)
-
-    @pyffi.struct('Point*')
-    class Point(object):
+    class Point(pyffi.struct('Point*', register=False)):
         def __init__(self):
             self._init(x=1, y=2)
     #
@@ -72,13 +76,8 @@ def test_override_init():
 def test_nested_struct():
     pyffi = PyFFI(ffi)
 
-    @pyffi.struct('Point*', immutable=False)
-    class Point(object):
-        pass
-
-    @pyffi.struct('Rectangle*', immutable=False)
-    class Rectangle(object):
-        pass
+    Point = pyffi.struct('Point*', immutable=False)
+    Rectangle = pyffi.struct('Rectangle*', immutable=False)
 
     p1 = Point(1, 2)
     p2 = Point(3, 4)
@@ -91,11 +90,7 @@ def test_nested_struct():
 
 def test_equality_hash():
     pyffi = PyFFI(ffi)
-
-    @pyffi.struct('Point*')
-    class Point(object):
-        pass
-
+    Point = pyffi.struct('Point*')
     p1 = Point(1, 2)
     p2 = Point(1, 2)
     assert hash(p1) == hash(p2)
@@ -111,11 +106,7 @@ def test_string():
         } Person;
     """)
     pyffi = PyFFI(ffi)
-
-    @pyffi.struct('Person*')
-    class Person(object):
-        pass
-
+    Person = pyffi.struct('Person*')
     p = Person('Foobar')
     assert p.name == 'Foobar'
     assert gclib.isptr(p._ptr.name)
@@ -129,11 +120,7 @@ def test_array_of_chars():
         } Person;
     """)
     pyffi = PyFFI(ffi)
-
-    @pyffi.struct('Person*')
-    class Person(object):
-        pass
-
+    Person = pyffi.struct('Person*')
     p = Person('Foobar')
     assert p.name == 'Foobar'
     assert ffi.string(p._ptr.name) == 'Foobar'
@@ -152,11 +139,8 @@ def test_list_field():
 
     LongList = ListType(pyffi, 'long')
     pyffi.register('LongList*', LongList)
-
-    @pyffi.struct('MyStruct*')
-    class MyStruct(object):
-        pass
-
+    MyStruct = pyffi.struct('MyStruct*')
+    #
     mylist = LongList(range(5))
     obj = MyStruct(mylist)
     assert isinstance(obj.mylist, FixedSizeListInstance)
@@ -176,11 +160,8 @@ def test_dict_field():
 
     PersonDB = DictType(pyffi, 'const char*', 'long')
     pyffi.register('PersonDB*', PersonDB)
-
-    @pyffi.struct('MyStruct*')
-    class MyStruct(object):
-        pass
-
+    MyStruct = pyffi.struct('MyStruct*')
+    #
     db = PersonDB()
     db['foo'] = 32
     db['bar'] = 42
