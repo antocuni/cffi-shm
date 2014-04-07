@@ -19,7 +19,13 @@ class PyFFI(object):
 
     def register(self, t, pytype):
         ctype = cffi_typeof(self.ffi, t)
+        cur_pytype = self.pytypes.get(ctype)
+        if cur_pytype is not None:
+            if not issubclass(pytype, cur_pytype):
+                raise TypeError("The wrapper class for ctype %s has already "
+                                "been registered as %s" % (t, self.pytypes[ctype]))
         self.pytypes[ctype] = pytype
+
         # XXX
         if cffi_is_struct_ptr(self.ffi, ctype):
             self.pytypes[ctype.item] = pytype
