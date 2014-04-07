@@ -4,13 +4,8 @@ from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity)
 
 def make_struct(pyffi, ctype, immutable=True):
-    if immutable:
-        base = BaseImmutableStruct
-    else:
-        base = BaseStruct
-
     decorate = StructDecorator(pyffi, ctype, immutable)
-    class MyStruct(base):
+    class MyStruct(BaseStruct):
         class __metaclass__(type):
             def __init__(cls, name, bases, dic):
                 cls = decorate(cls)
@@ -33,17 +28,6 @@ class BaseStruct(object):
 
     def as_cdata(self):
         return self._ptr
-
-class BaseImmutableStruct(BaseStruct):
-
-    def __hash__(self):
-        return hash(self._key())
-
-    def __eq__(self, other):
-        return self._key() == other._key()
-
-    def _key(self):
-        raise NotImplementedError
 
 
 class StructDecorator(object):
@@ -111,6 +95,14 @@ class StructDecorator(object):
         """ % items)
         cls._key = compile_def(src)
 
+        def __hash__(self):
+            return hash(self._key())
+        def __eq__(self, other):
+            return self._key() == other._key()
+        cls.__hash__ = __hash__
+        cls.__eq__ = __eq__
+
+
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)
         setter = self.setter(cls, fieldname, field)
@@ -139,3 +131,4 @@ class StructDecorator(object):
         fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
+
