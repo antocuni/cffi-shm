@@ -8,10 +8,52 @@ class AbstractGenericType(object):
 
 
 class PyFFI(object):
+    """
+    Wrap the types in the given ffi into nice Python objects.
+    This is the main entry-point for the shm package.
+    """
+
     def __init__(self, ffi):
         self.ffi = ffi
         self.pytypes = {} # ctype --> python class
         self._converters = {}
+
+    def struct(self, t, **kwds):
+        """
+        Create a struct type. ``t`` must be a valid typename already defined
+        in the ffi.
+        """
+        ctype = cffi_typeof(self.ffi, t)
+        cls = make_struct(self, ctype, **kwds)
+        return cls
+
+    def list(self, t, cname=None, **kwds):
+        """
+        Create a list type whose items are of type ``t``. If ``cname`` is
+        given, the list type is also registered as an opaque C typedef in the
+        ffi, so that it can be used to e.g. declare fields in subsequent
+        struct definitions.
+        """
+        from shm.list import ListType
+        LT = ListType(self, t, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', LT)
+        return LT
+
+    def dict(self, keytype, valuetype, cname=None, **kwds):
+        """
+        Create a dict type for the given ``keytype`` and ``valuetype``. If
+        ``cname`` is given, the dict type is also registered as an opaque C
+        typedef in the ffi, so that it can be used to e.g. declare fields in
+        subsequent struct definitions.
+        """
+        from shm.dict import DictType
+        DT = DictType(self, keytype, valuetype, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', DT)
+        return DT
 
     def pytypeof(self, t):
         ctype = cffi_typeof(self.ffi, t)
@@ -25,27 +67,6 @@ class PyFFI(object):
                 raise TypeError("The wrapper class for ctype %s has already "
                                 "been registered as %s" % (t, self.pytypes[ctype]))
         self.pytypes[ctype] = pytype
-
-    def struct(self, t, **kwds):
-        ctype = cffi_typeof(self.ffi, t)
-        cls = make_struct(self, ctype, **kwds)
-        return cls
-
-    def list(self, t, cname=None, **kwds):
-        from shm.list import ListType
-        LT = ListType(self, t, **kwds)
-        if cname:
-            self._new_opaque_type(cname)
-            self.register(cname+'*', LT)
-        return LT
-
-    def dict(self, keytype, valuetype, cname=None, **kwds):
-        from shm.dict import DictType
-        DT = DictType(self, keytype, valuetype, **kwds)
-        if cname:
-            self._new_opaque_type(cname)
-            self.register(cname+'*', DT)
-        return DT
 
     def _new_opaque_type(self, t):
         self.ffi.cdef('typedef struct %s %s;' % (t, t))
