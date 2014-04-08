@@ -153,8 +153,7 @@ def test_dict_field():
     """)
     pyffi = PyFFI(ffi)
 
-    PersonDB = DictType(pyffi, 'const char*', 'long')
-    pyffi.register('PersonDB*', PersonDB)
+    PersonDB = pyffi.dict('const char*', 'long', cname='PersonDB')
     MyStruct = pyffi.struct('MyStruct')
     #
     db = PersonDB()

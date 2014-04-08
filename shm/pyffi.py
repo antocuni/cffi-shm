@@ -39,6 +39,14 @@ class PyFFI(object):
             self.register(cname+'*', LT)
         return LT
 
+    def dict(self, keytype, valuetype, cname=None, **kwds):
+        from shm.dict import DictType
+        DT = DictType(self, keytype, valuetype, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', DT)
+        return DT
+
     def _new_opaque_type(self, t):
         self.ffi.cdef('typedef struct %s %s;' % (t, t))
 
