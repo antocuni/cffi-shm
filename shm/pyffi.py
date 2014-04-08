@@ -31,6 +31,17 @@ class PyFFI(object):
         cls = make_struct(self, ctype, **kwds)
         return cls
 
+    def list(self, t, cname=None, **kwds):
+        from shm.list import ListType
+        LT = ListType(self, t, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', LT)
+        return LT
+
+    def _new_opaque_type(self, t):
+        self.ffi.cdef('typedef struct %s %s;' % (t, t))
+
     def get_converter(self, t, allow_structs_byval=False):
         ctype = cffi_typeof(self.ffi, t)
         if ctype.kind == 'struct':

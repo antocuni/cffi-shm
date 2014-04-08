@@ -123,7 +123,7 @@ def test_array_of_chars():
 
 
 def test_list_field():
-    from shm.list import ListType, FixedSizeListInstance
+    from shm.list import FixedSizeListInstance
     ffi = cffi.FFI()
     ffi.cdef("""
         typedef struct LongList LongList;
@@ -133,8 +133,7 @@ def test_list_field():
     """)
     pyffi = PyFFI(ffi)
 
-    LongList = ListType(pyffi, 'long')
-    pyffi.register('LongList*', LongList)
+    LongList = pyffi.list('long', cname='LongList')
     MyStruct = pyffi.struct('MyStruct')
     #
     mylist = LongList(range(5))
