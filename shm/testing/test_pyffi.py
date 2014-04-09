@@ -60,6 +60,9 @@ def test_StructConverter():
     assert isinstance(p2, Point)
     assert p2 is not p
     assert p2._ptr is p._ptr
+    #
+    assert conv.from_python(None) == ffi.NULL
+    assert conv.to_python(ffi.NULL) is None
 
 def test_StringConverter():
     ffi = cffi.FFI()
@@ -76,7 +79,10 @@ def test_StringConverter():
     #
     p2 = ffi.new('char[]', 'foobar')
     assert conv.to_python(p2) == 'foobar'
-
+    #
+    assert conv.from_python(None) == ffi.NULL
+    assert conv.to_python(ffi.NULL) is None
+    
 
 def test_PrimitiveConverter():
     ffi = cffi.FFI()

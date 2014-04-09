@@ -49,15 +49,20 @@ class Dummy(AbstractConverter):
     def from_python(self, obj, ensure_shm=True):
         return obj
 
+
 class StructPtr(AbstractConverter):
     def __init__(self, ffi, ctype, class_):
         AbstractConverter.__init__(self, ffi, ctype)
         self.class_ = class_
 
     def to_python_impl(self, cdata):
+        if cdata == self.ffi.NULL:
+            return None
         return self.class_.from_pointer(cdata)
 
     def from_python(self, obj, ensure_shm=True):
+        if obj is None:
+            return self.ffi.NULL
         return obj.as_cdata()
 
 class StructByVal(AbstractConverter):
@@ -82,9 +87,13 @@ class GenericTypePtr(AbstractConverter):
         self.class_ = class_
 
     def to_python_impl(self, cdata):
+        if cdata == self.ffi.NULL:
+            return None
         return self.class_.from_pointer(cdata)
 
     def from_python(self, obj, ensure_shm=True):
+        if obj is None:
+            return self.ffi.NULL
         # obj.as_cdata returns the concrete type (e.g. List* from listffi),
         # but we need to cast it to the corresponding opaque generic type
         return self.ffi.cast(self.ctype, obj.as_cdata())
@@ -92,9 +101,13 @@ class GenericTypePtr(AbstractConverter):
 
 class String(AbstractConverter):
     def to_python_impl(self, cdata):
+        if cdata == self.ffi.NULL:
+            return None
         return self.ffi.string(cdata)
 
     def from_python(self, s, ensure_shm=True):
+        if s is None:
+            return self.ffi.NULL
         if ensure_shm:
             return gclib.new_string(s)
         else:
