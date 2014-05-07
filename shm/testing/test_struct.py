@@ -29,6 +29,7 @@ def test_immutable_struct():
     assert p.y == 4
     py.test.raises(AttributeError, "p.x = 0")
     py.test.raises(AttributeError, "p.y = 0")
+    py.test.raises(AttributeError, "p.I_dont_exist = 0")
     #
     p._ptr.x = 0
     assert p.x == 0
@@ -39,11 +40,11 @@ def test_mutable_struct():
     p = Point(x=3, y=4)
     assert p.x == 3
     assert p.y == 4
+    py.test.raises(AttributeError, "p.I_dont_exist = 0")
     assert p._ptr.x == 3
     p.x = 0
     p.y = 0
     assert p._ptr.x == 0
-
 
 def test_inheritance():
     pyffi = PyFFI(ffi)

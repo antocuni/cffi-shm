@@ -8,6 +8,7 @@ def make_struct(pyffi, ctype, immutable=True):
     ptr_ctype = ctype_pointer_to(pyffi.ffi, ctype)
     decorate = StructDecorator(pyffi, ptr_ctype, immutable)
     class MyStruct(BaseStruct):
+        __slots__ = ()
         class __metaclass__(type):
             def __init__(cls, name, bases, dic):
                 cls = decorate(cls)
@@ -19,6 +20,7 @@ def make_struct(pyffi, ctype, immutable=True):
 
 
 class BaseStruct(object):
+    __slots__ = ('_ptr',)
 
     @classmethod
     def from_pointer(cls, ptr):
