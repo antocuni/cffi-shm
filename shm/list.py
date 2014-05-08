@@ -17,17 +17,12 @@ listffi.cdef("""
 
 class ListType(AbstractGenericType):
 
-    def __init__(self, pyffi, itemtype, fixedsize=True):
+    def __init__(self, pyffi, itemtype, listclass=None):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
-        self.fixedsize = fixedsize
-        if fixedsize:
-            self.listclass = FixedSizeListInstance
-        else:
-            print 'WARNING: non-fixedsize shm lists are not yet thread-safe'
-            self.listclass = ListInstance
+        self.listclass = listclass or FixedSizeList
         #
         # if it's a primitive we do not need a converter, because the
         # conversion is already performed automatically by typeditems, which
@@ -57,7 +52,7 @@ class ListType(AbstractGenericType):
         return self.listclass(self, ptr)
 
 
-class FixedSizeListInstance(object):
+class FixedSizeList(object):
 
     def __init__(self, listtype, lst):
         """
@@ -121,7 +116,10 @@ class FixedSizeListInstance(object):
             yield self._getitem(i)
             i += 1
 
-class ListInstance(FixedSizeListInstance):
+class ResizableList(FixedSizeList):
+    """
+    WARNING: ListInstance is not thread-safe!
+    """
 
     def append(self, item):
         lst = self.lst

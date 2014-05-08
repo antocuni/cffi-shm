@@ -2,7 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.pyffi import PyFFI
-from shm.list import ListType
+from shm.list import ListType, FixedSizeList, ResizableList
 gclib.init('/cffi-shm-testing')
 
 @py.test.fixture
@@ -17,7 +17,7 @@ def test_newlist(pyffi):
     assert len(l) == 0
 
 def test_append(pyffi):
-    LT = ListType(pyffi, 'long', fixedsize=False)
+    LT = ListType(pyffi, 'long', ResizableList)
     l = LT()
     l.append(42)
     assert len(l) == 1
@@ -27,7 +27,7 @@ def test_append(pyffi):
     assert l.typeditems[1] == 43
 
 def test_growing(pyffi):
-    LT = ListType(pyffi, 'long', fixedsize=False)
+    LT = ListType(pyffi, 'long', ResizableList)
     l = LT()
     l.append(42)
     l.append(43)
@@ -102,8 +102,18 @@ def test_list_of_structs(pyffi):
     assert lst[1] == p2
 
 def test_fixed_size_list(pyffi):
-    LT = ListType(pyffi, 'long', fixedsize=True)
+    LT = ListType(pyffi, 'long')
     l = LT(range(5))
     assert l[0] == 0
     assert l[4] == 4
     py.test.raises(AttributeError, "l.append(5)")
+
+def test_inheritance(pyffi):
+    class MyList(FixedSizeList):
+        def foo(self):
+            return len(self)*2
+
+    LT = ListType(pyffi, 'long', MyList)
+    l = LT(range(5))
+    assert len(l) == 5
+    assert l.foo() == 10

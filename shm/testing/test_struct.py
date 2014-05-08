@@ -124,7 +124,7 @@ def test_array_of_chars():
 
 
 def test_list_field():
-    from shm.list import FixedSizeListInstance
+    from shm.list import FixedSizeList
     ffi = cffi.FFI()
     ffi.cdef("""
         typedef struct LongList LongList;
@@ -139,7 +139,7 @@ def test_list_field():
     #
     mylist = LongList(range(5))
     obj = MyStruct(mylist)
-    assert isinstance(obj.mylist, FixedSizeListInstance)
+    assert isinstance(obj.mylist, FixedSizeList)
     assert list(obj.mylist) == range(5)
 
 
