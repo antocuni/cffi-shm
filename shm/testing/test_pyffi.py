@@ -99,3 +99,13 @@ def test_cache_converter():
     b = pyffi.get_converter('long')
     c = pyffi.get_converter('long', allow_structs_byval=True)
     assert a is b is c
+
+def test_DoubleOrNone():
+    from shm.converter import DoubleOrNone
+    conv = DoubleOrNone(None, None)
+    assert conv.to_python('42.3') == 42.3
+    assert conv.to_python(float('NaN')) is None
+    #
+    assert conv.from_python(42) == 42
+    res = conv.from_python(None)
+    assert res != res

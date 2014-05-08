@@ -144,3 +144,23 @@ class Primitive(AbstractConverter):
 
     def from_python(self, obj, ensure_shm=True):
         return obj
+
+class DoubleOrNone(AbstractConverter):
+    """
+    Convert Python floats to and from C doubles.
+    Python None is converted to NaN.
+
+    This converter is never used by default, it must be explicitly passed as a
+    custom converter.
+    """
+
+    def to_python_impl(self, cdata):
+        value = float(cdata)
+        if value != value: # NaN:
+            return None
+        return value
+
+    def from_python(self, obj, ensure_shm=True):
+        if obj is None:
+            return float('NaN')
+        return obj
