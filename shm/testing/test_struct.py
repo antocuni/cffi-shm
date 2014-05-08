@@ -2,6 +2,7 @@ import py
 import cffi
 from shm import gclib
 from shm.pyffi import PyFFI
+from shm.converter import AbstractConverter
 gclib.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
@@ -164,3 +165,25 @@ def test_dict_field():
     assert isinstance(obj.db, DictInstance)
     assert obj.db['foo'] == 32
     assert obj.db['bar'] == 42
+
+def test_custom_converter():
+    class MyConverter(AbstractConverter):
+        def to_python_impl(self, cdata):
+            return float(cdata) * 2
+
+        def from_python(self, obj, ensure_shm=True):
+            return obj+1
+
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct {
+            double x;
+        } MyStruct;
+    """)
+    pyffi = PyFFI(ffi)
+    converters = {'x': MyConverter}
+    MyStruct = pyffi.struct('MyStruct', converters=converters)
+    obj = MyStruct(20)
+    assert obj._ptr.x == 21
+    assert obj.x == 42
+    

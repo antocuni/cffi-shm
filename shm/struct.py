@@ -3,10 +3,10 @@ from shm import gclib
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity, ctype_pointer_to)
 
-def make_struct(pyffi, ctype, immutable=True):
+def make_struct(pyffi, ctype, immutable=True, converters=None):
     struct_ctype = ctype
     ptr_ctype = ctype_pointer_to(pyffi.ffi, ctype)
-    decorate = StructDecorator(pyffi, ptr_ctype, immutable)
+    decorate = StructDecorator(pyffi, ptr_ctype, immutable, converters)
     class MyStruct(BaseStruct):
         __slots__ = ()
         class __metaclass__(type):
@@ -41,7 +41,7 @@ class StructDecorator(object):
     expected to be a subclass of BaseStruct
     """
 
-    def __init__(self, pyffi, ctype, immutable=True):
+    def __init__(self, pyffi, ctype, immutable=True, converters=None):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.ctype = cffi_typeof(self.ffi, ctype)
@@ -49,6 +49,7 @@ class StructDecorator(object):
         if not cffi_is_struct_ptr(self.ffi, self.ctype):
             raise TypeError("ctype must be a pointer to a struct, got %s" % self.ctype)
         self.fieldnames = [name for name, field in self.ctype.item.fields]
+        self.converters = converters or {}
 
     def __call__(self, cls):
         cls.pyffi = self.pyffi
@@ -117,8 +118,14 @@ class StructDecorator(object):
             p = property(getter, setter)
         setattr(cls, fieldname, p)
 
+    def get_converter(self, fieldname, field):
+        conv = self.converters.get(fieldname)
+        if conv is not None:
+            return conv(self.pyffi, field.type)
+        return self.pyffi.get_converter(field.type)
+
     def getter(self, cls, fieldname, field):
-        conv = self.pyffi.get_converter(field.type)
+        conv = self.get_converter(fieldname, field)
         src = py.code.Source("""
             def __get_{x}(self):
                 return conv.to_python(self._ptr.{x})
@@ -128,7 +135,7 @@ class StructDecorator(object):
         return fn
 
     def setter(self, cls, fieldname, field):
-        conv = self.pyffi.get_converter(field.type)
+        conv = self.get_converter(fieldname, field)
         src = py.code.Source("""
             def __set_{x}(self, value):
                 self._ptr.{x} = conv.from_python(value)
