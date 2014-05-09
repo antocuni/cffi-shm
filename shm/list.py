@@ -43,23 +43,29 @@ class ListType(AbstractGenericType):
             ptr.items = gclib.new_array(self.ffi, self.itemtype, 2)
             ptr.size = 2
             ptr.length = 0
-        lst = self.listclass(self, ptr)
+        lst = self.listclass.from_pointer(self, ptr)
         lst._setcontent(items)
         return lst
 
     def from_pointer(self, ptr):
         ptr = listffi.cast('List*', ptr)
-        return self.listclass(self, ptr)
+        return self.listclass.from_pointer(self, ptr)
 
 
 class FixedSizeList(object):
 
-    def __init__(self, listtype, lst):
+    def __new__(self, *args, **kwds):
+        raise NotImplementedError
+
+    @classmethod
+    def from_pointer(cls, listtype, lst):
         """
         itemtype must be a valid ffi type, such as 'long' or 'void*'
         """
-        self.listtype = listtype
-        self.lst = lst
+        obj = object.__new__(cls)
+        obj.listtype = listtype
+        obj.lst = lst
+        return obj
 
     def as_cdata(self):
         return self.lst
