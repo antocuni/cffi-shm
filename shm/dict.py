@@ -76,7 +76,7 @@ class DictType(AbstractGenericType):
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
         #
         if root:
-            gclib.roots.add(dictffi, ptr)
+            ptr = gclib.roots.add(dictffi, ptr)
         return DictInstance(self, ptr)
 
     def from_pointer(self, ptr):

@@ -119,7 +119,7 @@ def new_string(s, root=True):
     lib.strncpy(ptr, s, size)
     ptr = gcffi.cast('char*', ptr)
     if root:
-        roots.add(gcffi, ptr)
+        ptr = roots.add(gcffi, ptr)
     return ptr
 
 def realloc_array(ffi, t, ptr, n):
