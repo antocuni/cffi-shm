@@ -50,7 +50,7 @@ def test_sharedmem(tmpdir):
         assert ffi.string(rawstr) == 'hello world'
 
     ffi = cffi.FFI()
-    rawstr = gclib.new_string('hello world', root=True)
+    rawstr = gclib.new_string('hello world')
     str_addr = int(ffi.cast('long', rawstr))
     assert exec_child(tmpdir, child, PATH, str_addr)
 
@@ -71,7 +71,7 @@ def test_list(tmpdir):
     ffi = cffi.FFI()
     pyffi = PyFFI(ffi)
     LT = ListType(pyffi, 'long')
-    lst = LT(range(100), root=True)
+    lst = LT(range(100))
     list_addr = int(ffi.cast('long', lst.lst))
     assert exec_child(tmpdir, child, PATH, list_addr)
 
@@ -94,7 +94,7 @@ def test_dict(tmpdir):
     ffi = cffi.FFI()
     pyffi = PyFFI(ffi)
     DT = DictType(pyffi, 'const char*', 'long')
-    d = DT(root=True)
+    d = DT()
     d['hello'] = 1
     d['world'] = 2
     dict_addr = int(ffi.cast('long', d.ht))

@@ -92,7 +92,7 @@ def open(path):
         raise OSError('Failed to open the shm GC')
 
 
-def new(ffi, t, root=False):
+def new(ffi, t, root=True):
     ctype = cffi_typeof(ffi, t)
     if ctype.kind != 'pointer':
         raise TypeError("Expected a pointer, got '%s'" % t)
@@ -101,25 +101,26 @@ def new(ffi, t, root=False):
         raise MemoryError
     res = ffi.cast(ctype, ptr)
     if root:
-        roots.add(res)
+        res = roots.add(ffi, res)
     return res
 
-def new_array(ffi, t, n, root=False):
+def new_array(ffi, t, n, root=True):
     ptr = lib.GC_malloc(ffi.sizeof(t) * n)
     res = ffi.cast("%s[%d]" % (t, n) , ptr)
     if root:
-        roots.add(res)
+        res = roots.add(ffi, res)
     return res
 
-def new_string(s, root=False):
+def new_string(s, root=True):
     size = len(s)+1
     ptr = lib.GC_malloc(size)
     # XXX: this does one extra copy, because s is copied to a temp buffer to
     # pass to strncpy. I don't know how to avoid it, though
     lib.strncpy(ptr, s, size)
+    ptr = gcffi.cast('char*', ptr)
     if root:
-        roots.add(ptr)
-    return gcffi.cast('char*', ptr)
+        roots.add(gcffi, ptr)
+    return ptr
 
 def realloc_array(ffi, t, ptr, n):
     ptr = lib.GC_realloc(ptr, ffi.sizeof(t) * n)
@@ -132,9 +133,9 @@ enable = lib.GC_enable
 disable = lib.GC_disable
 isptr = lib.GC_isptr
 
-class RootCollection(object):
+class GcRootCollection(object):
     """
-    For now we allow only a fixed number of roots, up to 512.  In the future,
+    For now we allow only a fixed number of roots, up to 2048.  In the future,
     we can make it smarter to grow/shrink automatically.
     """
     def __init__(self):
@@ -142,15 +143,32 @@ class RootCollection(object):
 
     def reinit(self):
         self.n = 0
-        self.maxroots = 512
+        self.maxroots = 2048
         self.mem = gcffi.new('void*[]', self.maxroots)
         lib.GC_root(self.mem, self.maxroots)
 
-    def add(self, ptr):
-        self.mem[self.n] = ptr
+    def _add(self, ptr):
+        i = self.n
+        if i >= self.maxroots:
+            raise ValueError, 'No more space for GC roots'
         self.n += 1
+        return GcRoot(self.mem, i, ptr)
 
-roots = RootCollection()
+    def add(self, ffi, ptr):
+        root = self._add(ptr)
+        return ffi.gc(ptr, root.clear)
+
+
+class GcRoot(object):
+    def __init__(self, mem, i, ptr):
+        self.mem = mem
+        self.i = i
+        self.mem[i] = ptr
+
+    def clear(self, ptr):
+        self.mem[self.i] = gcffi.NULL
+
+roots = GcRootCollection()
 
 
 class Disabled(object):

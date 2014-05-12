@@ -35,7 +35,7 @@ class ListType(AbstractGenericType):
     def __repr__(self):
         return '<shm type list [%s]>' % self.itemtype
 
-    def __call__(self, items=None, root=False):
+    def __call__(self, items=None, root=True):
         with gclib.disabled:
             ptr = gclib.new(listffi, 'List*', root)
             # even for empty lists, we start by allocating 2 items, and then

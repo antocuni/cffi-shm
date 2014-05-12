@@ -68,7 +68,7 @@ class DictType(AbstractGenericType):
     def __repr__(self):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
 
-    def __call__(self, root=False):
+    def __call__(self, root=True):
         with gclib.disabled:
             ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                                  gclib.lib.get_GC_free())
@@ -76,7 +76,7 @@ class DictType(AbstractGenericType):
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
         #
         if root:
-            gclib.roots.add(ptr)
+            gclib.roots.add(dictffi, ptr)
         return DictInstance(self, ptr)
 
     def from_pointer(self, ptr):

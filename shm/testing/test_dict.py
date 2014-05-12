@@ -85,7 +85,7 @@ def test_keys(pyffi):
 
 def test_from_pointer(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
-    d = DT(root=True)
+    d = DT()
     d['hello'] = 1
     d['world'] = 2
     ptr = pyffi.ffi.cast('void*', d.ht)
