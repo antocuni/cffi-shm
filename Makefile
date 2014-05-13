@@ -1,5 +1,7 @@
+#CFLAGS=-O0 -g
+
 libshmgc.so: gc.h gc.c gc.lds
-	gcc --std=gnu99 -I. -shared -fPIC -Wl,-T,gc.lds -lrt gc.c -o libshmgc.so
+	gcc $(CFLAGS) --std=gnu99 -I. -shared -fPIC -Wl,-T,gc.lds -lrt gc.c -o libshmgc.so
 
 # The purpose of this linker script is to place the library at the address
 # immediately following the shared memory area, i.e. at

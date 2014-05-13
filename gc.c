@@ -791,6 +791,7 @@ gc_mark_loop_inner:
                 continue;
             }
 
+            //fprintf(stderr, "GC: considering ptr %p\n", ptr);
             // 'ptr' has been deemed to be a GC pointer; check if it has been
             // marked;
             uint32_t size = region->size;
