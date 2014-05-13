@@ -107,7 +107,15 @@ class StructDecorator(object):
             return self._key() == other._key()
         cls.__hash__ = __hash__
         cls.__eq__ = __eq__
-
+        #
+        ffi = self.ffi
+        ctype = self.ctype
+        @ffi.callback("int(void*, size_t)")
+        def __c_hash__(ptr, length):
+            ptr = ffi.cast(ctype, ptr)
+            self = cls.from_pointer(ptr)
+            return ffi.cast('int', hash(self))
+        cls.__c_hash__ = __c_hash__
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)
