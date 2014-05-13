@@ -144,17 +144,18 @@ isptr = lib.GC_isptr
 
 class GcRootCollection(object):
     """
-    For now we allow only a fixed number of roots, up to 2048.  In the future,
-    we can make it smarter to grow/shrink automatically.
+    For now we allow only a fixed number of roots. In the future, we can make
+    it smarter to grow/shrink automatically.
     """
-    def __init__(self):
-        self.reinit()
+    def __init__(self, maxroots):
+        self.reinit(maxroots)
 
-    def reinit(self):
+    def reinit(self, maxroots):
         self.n = 0
-        self.maxroots = 2048
+        self.maxroots = maxroots
         self.mem = gcffi.new('void*[]', self.maxroots)
-        lib.GC_root(self.mem, self.maxroots)
+        size = self.maxroots * gcffi.sizeof('void*')
+        lib.GC_root(self.mem, size)
 
     def _add(self, ptr):
         i = self.n
@@ -177,7 +178,7 @@ class GcRoot(object):
     def clear(self, ptr):
         self.mem[self.i] = gcffi.NULL
 
-roots = GcRootCollection()
+roots = GcRootCollection(2048)
 
 
 class Disabled(object):

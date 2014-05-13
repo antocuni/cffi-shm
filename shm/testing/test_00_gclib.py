@@ -109,3 +109,14 @@ def test_root_keepalive():
     ptr3 = gclib.new(ffi, 'Point*')
     addr3 = getaddr(ptr3)
     assert addr3 == addr1
+
+def test_root_size(monkeypatch):
+    gclib.collect()
+    myroots = gclib.GcRootCollection(16)
+    monkeypatch.setattr(gclib, 'roots', myroots)
+    p1 = gclib.new(ffi, 'Point*')
+    p2 = gclib.new(ffi, 'Point*')
+    p3 = gclib.new(ffi, 'Point*')
+    gclib.collect()
+    p4 = gclib.new(ffi, 'Point*')
+    assert p4 not in (p1, p2, p3)
