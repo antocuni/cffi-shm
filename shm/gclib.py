@@ -55,7 +55,7 @@ gcffi.cdef("""
 # comment above). Uncomment the second line for development if you need debug
 # symbols.
 GC_path = 'GC'
-GC_path = os.path.abspath(GC_path)
+#GC_path = os.path.abspath(GC_path)
 
 lib = gcffi.verify(
     """
