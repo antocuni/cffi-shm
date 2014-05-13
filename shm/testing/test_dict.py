@@ -156,3 +156,34 @@ def test_key_struct_byptr(pyffi):
     #
     keys = sorted(d.keys())
     assert keys == [antocuni, wrongname]
+
+
+def test_key_hash(pyffi):
+    ffi = pyffi.ffi
+    ffi.cdef("""
+        typedef struct {
+            const char* first_name;
+            const char* last_name;
+        } FullName;
+    """)
+
+    class FullName(pyffi.struct('FullName')):
+        # this is needed for 'sorted' below
+        def __cmp__(self, other):
+            return cmp(self._key(), other._key())
+
+    antocuni = FullName('Antonio', 'Cuni')
+    antocuni2 = FullName('Antonio', 'Cuni')
+    wrongname = FullName('Antonio', 'Foobar')
+
+    # third: we use struct by value, but we rely on the custom cmp function
+    DT = DictType(pyffi, 'FullName', 'long')
+    d = DT()
+    d[antocuni] = 1
+    d[wrongname] = 2
+    assert d[antocuni] == 1
+    assert d[antocuni2] == 1
+    assert d[wrongname] == 2
+    #
+    keys = sorted(d.keys())
+    assert keys == [antocuni, wrongname]

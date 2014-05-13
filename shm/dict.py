@@ -14,6 +14,9 @@ dictffi.cdef("""
     static const int CFUHASH_NO_LOCKING;
 
     typedef ... cfuhash_table_t;
+    typedef unsigned int (*cfuhash_function_t)(const void *key, size_t length);
+    typedef int (*cfuhash_cmp_t)(const void *key1, size_t length1,
+                                 const void *key2, size_t length2);
     typedef void* (*cfuhash_malloc_fn_t)(size_t size);
     typedef void (*cfuhash_free_fn_t)(void *data);
 
@@ -29,6 +32,9 @@ dictffi.cdef("""
 	                 size_t data_size, void **r);
     int cfuhash_exists_data(cfuhash_table_t *ht, const void *key, size_t key_size);
     void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
+
+    int cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf);
+    int cfuhash_set_cmp_function(cfuhash_table_t *ht, cfuhash_cmp_t cmpf);
 
     unsigned int cfuhash_get_flags(cfuhash_table_t *ht);
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
@@ -53,6 +59,8 @@ class DictType(AbstractGenericType):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.nocopy = False # by default, keys are copied
+        self.c_hash = None
+        self.c_cmp = None
         self.keytype = keytype
         self.valuetype = valuetype
         if cffi_is_string(self.ffi, keytype):
@@ -61,7 +69,12 @@ class DictType(AbstractGenericType):
             self.nocopy = True
             self.keysize = self.ffi.cast('size_t', 0)
         else:
+            self.nocopy = True
             self.keysize = self.ffi.sizeof(keytype)
+            pytype = pyffi.pytypeof(keytype)
+            self.c_hash = pytype.__c_hash__
+            self.c_cmp = pytype.__c_cmp__
+        #
         self.keyconverter = pyffi.get_converter(keytype, allow_structs_byval=True)
         self.valueconverter = pyffi.get_converter(valuetype)
 
@@ -74,6 +87,11 @@ class DictType(AbstractGenericType):
                                                  gclib.lib.get_GC_free())
         if self.nocopy:
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
+        if self.c_hash:
+            c_hash = dictffi.cast('cfuhash_function_t', self.c_hash)
+            c_cmp = dictffi.cast('cfuhash_cmp_t', self.c_cmp)
+            lib.cfuhash_set_hash_function(ptr, c_hash)
+            lib.cfuhash_set_cmp_function(ptr, c_cmp)
         #
         if root:
             ptr = gclib.roots.add(dictffi, ptr)

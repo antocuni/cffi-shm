@@ -116,6 +116,17 @@ class StructDecorator(object):
             self = cls.from_pointer(ptr)
             return ffi.cast('int', hash(self))
         cls.__c_hash__ = __c_hash__
+        #
+        @ffi.callback("int(void*, size_t, void*, size_t)")
+        def __c_cmp__(ptr1, length1, ptr2, length2):
+            if length1 != length2:
+                return 1
+            obj1 = cls.from_pointer(ffi.cast(ctype, ptr1))
+            obj2 = cls.from_pointer(ffi.cast(ctype, ptr2))
+            if obj1 == obj2:
+                return 0
+            return 1
+        cls.__c_cmp__ = __c_cmp__
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)

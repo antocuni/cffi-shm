@@ -87,6 +87,7 @@ struct cfuhash_table {
 #endif
 	unsigned int flags;
 	cfuhash_function_t hash_func;
+    cfuhash_cmp_t cmp_func;
 	size_t each_bucket_index;
 	cfuhash_entry *each_chain_entry;
 	float high;
@@ -334,6 +335,15 @@ cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf) {
 	return 0;
 }
 
+
+int cfuhash_set_cmp_function(cfuhash_table_t *ht, cfuhash_cmp_t cmpf) {
+	/* can't allow changing the cmp function if the hash already contains entries */
+	if (ht->entries) return -1;
+
+	ht->cmp_func = cmpf;
+	return 0;
+}
+
 int
 cfuhash_set_free_function(cfuhash_table_t * ht, cfuhash_free_fn_t ff) {
 	if (ff) ht->values_free_fn = ff;
@@ -378,10 +388,14 @@ cfuhash_unlock(cfuhash_table_t *ht) {
 /* uses the convention that zero means a match, like memcmp */
 
 static CFU_INLINE int
-hash_cmp(const void *key, size_t key_size, cfuhash_entry *he, unsigned int case_insensitive) {
+hash_cmp(cfuhash_table_t *ht, const void *key, size_t key_size, 
+         cfuhash_entry *he, unsigned int case_insensitive) {
 	if (key_size != he->key_size) return 1;
 	if (key == he->key) return 0;
     if (key_size == 0) return 1; /* compare by pointer, not by value */
+    if (ht->cmp_func) {
+        return ht->cmp_func(key, key_size, he->key, he->key_size);
+    }
 	if (case_insensitive) {
 		return strncasecmp(key, he->key, key_size);
 	}
@@ -433,7 +447,7 @@ cfuhash_get_data(cfuhash_table_t *ht, const void *key, size_t key_size, void **r
 	assert(hv < ht->num_buckets);
 
 	for (hr = ht->buckets[hv]; hr; hr = hr->next) {
-		if (!hash_cmp(key, key_size, hr, ht->flags & CFUHASH_IGNORE_CASE)) break;
+		if (!hash_cmp(ht, key, key_size, hr, ht->flags & CFUHASH_IGNORE_CASE)) break;
 	}
 
 	if (hr && r) {
@@ -501,7 +515,7 @@ cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *da
 	hv = hash_value(ht, key, key_size, ht->num_buckets);
 	assert(hv < ht->num_buckets);
 	for (he = ht->buckets[hv]; he; he = he->next) {
-		if (!hash_cmp(key, key_size, he, ht->flags & CFUHASH_IGNORE_CASE)) break;
+		if (!hash_cmp(ht, key, key_size, he, ht->flags & CFUHASH_IGNORE_CASE)) break;
 	}
 
 	if (he) {
@@ -582,7 +596,7 @@ cfuhash_delete_data(cfuhash_table_t *ht, const void *key, size_t key_size) {
 	hv = hash_value(ht, key, key_size, ht->num_buckets);
 
 	for (he = ht->buckets[hv]; he; he = he->next) {
-		if (!hash_cmp(key, key_size, he, ht->flags & CFUHASH_IGNORE_CASE)) break;
+		if (!hash_cmp(ht, key, key_size, he, ht->flags & CFUHASH_IGNORE_CASE)) break;
 		hep = he;
 	}
 

@@ -49,6 +49,10 @@ typedef struct cfuhash_table cfuhash_table_t;
 /* Prototype for a pointer to a hashing function. */
 typedef unsigned int (*cfuhash_function_t)(const void *key, size_t length);
 
+/* Prototype for a pointer to a comparison function. */
+typedef int (*cfuhash_cmp_t)(const void *key1, size_t length1,
+                             const void *key2, size_t length2);
+
 /* Prototype for a pointer to a malloc function */
 typedef void* (*cfuhash_malloc_fn_t)(size_t size);
 
@@ -102,6 +106,10 @@ cfuhash_table_t * cfuhash_merge(cfuhash_table_t *ht1, cfuhash_table_t *ht2,
  * default, Perl's hashing algorithm is used.
  */
 int cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf);
+
+/* Sets the comparison function. By default, memcmp is used
+ */
+int cfuhash_set_cmp_function(cfuhash_table_t *ht, cfuhash_cmp_t cmpf);
 
 /* Sets the thresholds for when to rehash.  The ratio
  * num_entries/buckets is compared against low and high.  If it is
