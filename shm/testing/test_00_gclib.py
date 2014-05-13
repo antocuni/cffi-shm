@@ -17,8 +17,6 @@ def test_gc_memory():
     assert gclib.lib.GC_get_memsize() == 4*gb * 768
 
 def test_new():
-    gclib.roots.reinit()
-    gclib.collect()
     gclib.collect()
     p1 = gclib.new(ffi, 'Point*', root=False)
     assert gclib.isptr(p1)
@@ -30,8 +28,6 @@ def test_new():
     assert p1 == p2
 
 def test_new_root():
-    gclib.roots.reinit()
-    gclib.collect()
     gclib.collect()
     p1 = gclib.new(ffi, 'Point*')
     gclib.collect()

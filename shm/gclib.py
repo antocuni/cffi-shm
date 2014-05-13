@@ -148,9 +148,6 @@ class GcRootCollection(object):
     it smarter to grow/shrink automatically.
     """
     def __init__(self, maxroots):
-        self.reinit(maxroots)
-
-    def reinit(self, maxroots):
         self.n = 0
         self.maxroots = maxroots
         self.mem = gcffi.new('void*[]', self.maxroots)
