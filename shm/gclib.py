@@ -159,9 +159,14 @@ class GcRootCollection(object):
 
     def _add(self, ptr):
         i = self.n
-        if i >= self.maxroots:
-            raise ValueError, 'No more space for GC roots'
-        self.n += 1
+        while True:
+            if self.mem[i] == gcffi.NULL:
+                break
+            i = (i+1) % self.maxroots
+            if i == self.n:
+                raise ValueError, 'No more space for GC roots'
+
+        self.n = i
         return GcRoot(self.mem, i, ptr)
 
     def add(self, ffi, ptr):

@@ -1,3 +1,4 @@
+import py
 import cffi
 from shm import gclib
 gclib.init('/cffi-shm-testing')
@@ -73,7 +74,7 @@ def test_gc_disabled():
 
 
 def test_register_roots():
-    roots = gclib.GcRootCollection()
+    roots = gclib.GcRootCollection(4)
     ptr = gclib.gcffi.cast('void*', 0x42)
     a = roots._add(ptr)
     assert a.i == 0
@@ -86,6 +87,17 @@ def test_register_roots():
     a.clear(ptr)
     assert roots.mem[0] == gclib.gcffi.NULL
     assert roots.mem[1] == ptr
+    #
+    c = roots._add(ptr)
+    d = roots._add(ptr)
+    e = roots._add(ptr)
+    assert c.i == 2
+    assert d.i == 3
+    assert e.i == 0
+    d.clear(ptr)
+    f = roots._add(ptr)
+    assert f.i == 3
+    py.test.raises(ValueError, "roots._add(ptr)")
 
 
 def test_root_keepalive():
