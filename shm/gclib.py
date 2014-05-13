@@ -1,3 +1,4 @@
+import os.path
 import py
 import cffi
 from shm.util import cffi_typeof
@@ -48,6 +49,14 @@ gcffi.cdef("""
 
 ## import distutils.log
 ## distutils.log.set_verbosity(1)
+
+# if you want GDB to be able to locate symbols, you need an absolute
+# path. However, to distribute the library we need a relative one (see the big
+# comment above). Uncomment the second line for development if you need debug
+# symbols.
+GC_path = 'GC'
+GC_path = os.path.abspath(GC_path)
+
 lib = gcffi.verify(
     """
     #include <string.h>
@@ -60,7 +69,7 @@ lib = gcffi.verify(
     """,
     include_dirs = ['GC'],
     #extra_compile_args = ['-g', '-O0'],
-    extra_link_args = ['-Wl,-rpath,GC', '-LGC', '-lshmgc', '-lrt'],
+    extra_link_args = ['-Wl,-rpath,%s' % GC_path, '-LGC', '-lshmgc', '-lrt'],
 )
 old_cwd.chdir()
 
