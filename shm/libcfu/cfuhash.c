@@ -87,13 +87,13 @@ struct cfuhash_table {
 #endif
 	unsigned int flags;
 	cfuhash_function_t hash_func;
-    cfuhash_cmp_t cmp_func;
+	cfuhash_cmp_t cmp_func;
 	size_t each_bucket_index;
 	cfuhash_entry *each_chain_entry;
 	float high;
 	float low;
-    cfuhash_malloc_fn_t malloc_fn;
-    cfuhash_free_fn_t free_fn;
+	cfuhash_malloc_fn_t malloc_fn;
+	cfuhash_free_fn_t free_fn;
 	cfuhash_free_fn_t values_free_fn; /* this is optional */
 	unsigned int resized_count;
 	cfuhash_event_flags event_flags;
@@ -123,21 +123,21 @@ hash_func(const void *key, size_t length) {
    different address spaces.
 */
 static unsigned int call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
-    if (ht->hash_func == NULL)
-        return hash_func(key, length);
-    else
-        return ht->hash_func(key, length);
+	if (ht->hash_func == NULL)
+		return hash_func(key, length);
+	else
+		return ht->hash_func(key, length);
 }
 
 
 /* like stdlib's calloc, but using our own malloc function */
 static void * cfuhash_calloc(cfuhash_table_t *ht, size_t nmemb, size_t size) {
-    size_t total_size = nmemb*size;
-    void *mem = ht->malloc_fn(total_size);
-    if (!mem)
-        return NULL;
-    memset(mem, 0, total_size);
-    return mem;
+	size_t total_size = nmemb*size;
+	void *mem = ht->malloc_fn(total_size);
+	if (!mem)
+		return NULL;
+	memset(mem, 0, total_size);
+	return mem;
 }
 
 /* makes sure the real size of the buckets array is a power of 2 */
@@ -150,7 +150,7 @@ hash_size(unsigned int s) {
 
 static CFU_INLINE void *
 hash_key_dup(cfuhash_table_t *ht, const void *key, size_t key_size) {
-    assert(key_size != 0);
+	assert(key_size != 0);
 	void *new_key = ht->malloc_fn(key_size);
 	memcpy(new_key, key, key_size);
 	return new_key;
@@ -158,7 +158,7 @@ hash_key_dup(cfuhash_table_t *ht, const void *key, size_t key_size) {
 
 static CFU_INLINE void *
 hash_key_dup_lower_case(cfuhash_table_t *ht, const void *key, size_t key_size) {
-    assert(key_size != 0);
+	assert(key_size != 0);
 	char *new_key = (char *)hash_key_dup(ht, key, key_size);
 	size_t i = 0;
 	for (i = 0; i < key_size; i++) new_key[i] = tolower(new_key[i]);
@@ -170,10 +170,10 @@ static CFU_INLINE unsigned int
 hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buckets) {
 	unsigned int hv = 0;
 
-    if (key_size == 0) {
-        /* hashing the pointer itself, not the content */
-        hv = (unsigned int)key;
-    }
+	if (key_size == 0) {
+		/* hashing the pointer itself, not the content */
+		hv = (unsigned int)key;
+	}
 	else if (key) {
 		if (ht->flags & CFUHASH_IGNORE_CASE) {
 			char *lc_key = (char *)hash_key_dup_lower_case(ht, key, key_size);
@@ -194,20 +194,20 @@ hash_value(cfuhash_table_t *ht, const void *key, size_t key_size, size_t num_buc
 
 static cfuhash_table_t *
 _cfuhash_new(size_t size, unsigned int flags, cfuhash_malloc_fn_t malloc_fn, 
-             cfuhash_free_fn_t free_fn) {
+			 cfuhash_free_fn_t free_fn) {
 	cfuhash_table_t *ht;
 
-    if (malloc_fn == NULL)
-        malloc_fn = malloc;
-    if (free_fn == NULL)
-        free_fn = free;
+	if (malloc_fn == NULL)
+		malloc_fn = malloc;
+	if (free_fn == NULL)
+		free_fn = free;
 
 	size = hash_size(size);
 	ht = malloc_fn(sizeof(cfuhash_table_t));
 	memset(ht, '\000', sizeof(cfuhash_table_t));
 
-    ht->malloc_fn = malloc_fn;
-    ht->free_fn = free_fn;
+	ht->malloc_fn = malloc_fn;
+	ht->free_fn = free_fn;
 
 	ht->type = libcfu_t_hash_table;
 	ht->num_buckets = size;
@@ -233,7 +233,7 @@ cfuhash_new(void) {
 
 cfuhash_table_t *
 cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn, 
-                           cfuhash_free_fn_t free_fn) {
+						   cfuhash_free_fn_t free_fn) {
 	return _cfuhash_new(8, CFUHASH_FROZEN_UNTIL_GROWS, malloc_fn, free_fn);
 }
 
@@ -284,7 +284,7 @@ cfuhash_merge(cfuhash_table_t *ht1, cfuhash_table_t *ht2, unsigned int flags) {
 
 	flags |= CFUHASH_FROZEN_UNTIL_GROWS;
 	new_ht = _cfuhash_new(cfuhash_num_entries(ht1) + cfuhash_num_entries(ht2), flags,
-                          ht1->malloc_fn, ht1->free_fn);
+						  ht1->malloc_fn, ht1->free_fn);
 	if (ht1) cfuhash_copy(ht1, new_ht);
 	if (ht2) cfuhash_copy(ht2, new_ht);
 
@@ -389,13 +389,13 @@ cfuhash_unlock(cfuhash_table_t *ht) {
 
 static CFU_INLINE int
 hash_cmp(cfuhash_table_t *ht, const void *key, size_t key_size, 
-         cfuhash_entry *he, unsigned int case_insensitive) {
+		 cfuhash_entry *he, unsigned int case_insensitive) {
 	if (key_size != he->key_size) return 1;
 	if (key == he->key) return 0;
-    if (key_size == 0) return 1; /* compare by pointer, not by value */
-    if (ht->cmp_func) {
-        return ht->cmp_func(key, key_size, he->key, he->key_size);
-    }
+	if (key_size == 0) return 1; /* compare by pointer, not by value */
+	if (ht->cmp_func) {
+		return ht->cmp_func(key, key_size, he->key, he->key_size);
+	}
 	if (case_insensitive) {
 		return strncasecmp(key, he->key, key_size);
 	}
@@ -489,9 +489,9 @@ cfuhash_exists(cfuhash_table_t *ht, const char *key) {
 }
 
 /*
- Add the entry to the hash.  If there is already an entry for the
+ Add the entry to the hash.	 If there is already an entry for the
  given key, the old data value will be returned in r, and the return
- value is zero.  If a new entry is created for the key, the function
+ value is zero.	 If a new entry is created for the key, the function
  returns 1.
 */
 int
@@ -640,8 +640,8 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 	size_t key_count = 0;
 
 	if (!ht) {
-        if (key_sizes)
-            *key_sizes = NULL;
+		if (key_sizes)
+			*key_sizes = NULL;
 		*num_keys = 0;
 		return NULL;
 	}
@@ -650,11 +650,11 @@ cfuhash_keys_data(cfuhash_table_t *ht, size_t *num_keys, size_t **key_sizes, int
 
 	if (key_sizes) key_lengths = calloc(ht->entries, sizeof(size_t));
 	keys = calloc(ht->entries, sizeof(void *));
-    if (!keys) {
-        key_lengths = NULL;
-        key_count = 0;
-        goto exit;
-    }
+	if (!keys) {
+		key_lengths = NULL;
+		key_count = 0;
+		goto exit;
+	}
 
 	for (bucket = 0; bucket < ht->num_buckets; bucket++) {
 		if ( (he = ht->buckets[bucket]) ) {
