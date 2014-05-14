@@ -74,6 +74,15 @@ def test_get(pyffi):
     d['hello'] = 42
     assert d.get('hello') == 42
 
+def test___delitem__(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT()
+    d['hello'] = 42
+    assert 'hello' in d
+    del d['hello']
+    assert 'hello' not in d
+    py.test.raises(KeyError, "del d['foo']")
+
 def test_keys(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT()

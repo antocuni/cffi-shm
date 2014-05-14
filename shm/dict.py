@@ -31,6 +31,7 @@ dictffi.cdef("""
     int cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *data,
 	                 size_t data_size, void **r);
     int cfuhash_exists_data(cfuhash_table_t *ht, const void *key, size_t key_size);
+    void * cfuhash_delete_data(cfuhash_table_t *ht, const void *key, size_t key_size);
     void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
     int cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf);
@@ -148,6 +149,13 @@ class DictInstance(object):
     def __contains__(self, key):
         t = self.dictype
         return bool(lib.cfuhash_exists_data(self.ht, key, t.keysize))
+
+    def __delitem__(self, key):
+        t = self.dictype
+        key = self._key(key)
+        ret = lib.cfuhash_delete_data(self.ht, key, t.keysize)
+        if ret == t.ffi.NULL:
+            raise KeyError(key)
 
     def get(self, key, default=None):
         try:
