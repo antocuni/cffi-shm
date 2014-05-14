@@ -56,7 +56,7 @@ lib = dictffi.verify(
 old_cwd.chdir()
 
 class DictType(AbstractGenericType):
-    def __init__(self, pyffi, keytype, valuetype):
+    def __init__(self, pyffi, keytype, valuetype, default=None):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.nocopy = False # by default, keys are copied
@@ -64,6 +64,7 @@ class DictType(AbstractGenericType):
         self.c_cmp = None
         self.keytype = keytype
         self.valuetype = valuetype
+        self.default = default
         if cffi_is_string(self.ffi, keytype):
             self.keysize = self.ffi.cast('size_t', -1)
         elif cffi_is_struct_ptr(self.ffi, keytype):
@@ -99,11 +100,14 @@ class DictType(AbstractGenericType):
         #
         if root:
             ptr = gclib.roots.add(dictffi, ptr)
-        return DictInstance(self, ptr)
+        return self.from_pointer(ptr)
 
     def from_pointer(self, ptr):
         ptr = dictffi.cast('cfuhash_table_t*', ptr)
-        return DictInstance(self, ptr)
+        if self.default is not None:
+            return DefaultDictInstance(self, ptr, self.default)
+        else:
+            return DictInstance(self, ptr)
 
 
 
@@ -134,10 +138,13 @@ class DictInstance(object):
         ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
                                    self.retbuffer, dictffi.NULL)
         if ret == 0:
-            raise KeyError(key)
+            return self.__missing__(key)
         value = self.retbuffer[0]
         value = t.ffi.cast(t.valuetype, value)
         return t.valueconverter.to_python(value)
+
+    def __missing__(self, key):
+        raise KeyError(key)
 
     def __setitem__(self, key, value):
         t = self.dictype
@@ -179,3 +186,14 @@ class DictInstance(object):
             return keys
         finally:
             lib.free(keys_array)
+
+class DefaultDictInstance(DictInstance):
+
+    def __init__(self, dictype, ht, default_factory):
+        DictInstance.__init__(self, dictype, ht)
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        value = self.default_factory()
+        self[key] = value
+        return value
