@@ -68,12 +68,15 @@ class DictType(AbstractGenericType):
         elif cffi_is_struct_ptr(self.ffi, keytype):
             self.nocopy = True
             self.keysize = self.ffi.cast('size_t', 0)
-        else:
+        elif cffi_is_struct(self.ffi, keytype):
             self.nocopy = True
             self.keysize = self.ffi.sizeof(keytype)
             pytype = pyffi.pytypeof(keytype)
             self.c_hash = pytype.__c_hash__
             self.c_cmp = pytype.__c_cmp__
+        else: # primitive types
+            self.nocopy = True
+            self.keysize = self.ffi.sizeof(keytype)
         #
         self.keyconverter = pyffi.get_converter(keytype, allow_structs_byval=True)
         self.valueconverter = pyffi.get_converter(valuetype)

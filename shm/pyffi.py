@@ -55,6 +55,20 @@ class PyFFI(object):
             self.register(cname+'*', DT)
         return DT
 
+    def set(self, itemtype, cname=None, **kwds):
+        """
+        Create a set type for the given ``itemtype``. If ``cname`` is given,
+        the set type is also registered as an opaque C typedef in the ffi, so
+        that it can be used to e.g. declare fields in subsequent struct
+        definitions.
+        """
+        from shm.set import SetType
+        ST = SetType(self, itemtype, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', ST)
+        return ST
+
     def pytypeof(self, t):
         ctype = cffi_typeof(self.ffi, t)
         return self.pytypes[ctype]
