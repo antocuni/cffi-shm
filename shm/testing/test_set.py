@@ -15,3 +15,11 @@ def test_add_contains(pyffi):
     assert "foo" in s
     assert "bar" in s
     assert "foobar" not in s
+
+def test___iter__(pyffi):
+    ST = pyffi.set('const char*')
+    s = ST()
+    s.add("foo")
+    s.add("bar")
+    lst = sorted(list(s))
+    assert lst == ["bar", "foo"]
