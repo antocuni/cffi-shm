@@ -203,3 +203,18 @@ def test_defaultdict(pyffi):
     d = DT()
     assert d['hello'] == 42
     assert 'hello' in d
+
+def test_defaultdict_struct_keys(pyffi):
+    ffi = pyffi.ffi
+    ffi.cdef("""
+        typedef struct {
+            long x;
+            long y;
+        } Point;
+    """)
+
+    Point = pyffi.struct('Point')
+    DT = pyffi.defaultdict('Point', 'long', lambda: 42)
+    d = DT()
+    p = Point(1, 2)
+    assert d[p] == 42

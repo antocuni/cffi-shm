@@ -132,13 +132,13 @@ class DictInstance(object):
     def _key(self, key):
         return self.dictype.keyconverter.from_python(key, ensure_shm=False)
 
-    def __getitem__(self, key):
+    def __getitem__(self, ckey):
         t = self.dictype
-        key = self._key(key)
+        key = self._key(ckey)
         ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
                                    self.retbuffer, dictffi.NULL)
         if ret == 0:
-            return self.__missing__(key)
+            return self.__missing__(ckey)
         value = self.retbuffer[0]
         value = t.ffi.cast(t.valuetype, value)
         return t.valueconverter.to_python(value)
