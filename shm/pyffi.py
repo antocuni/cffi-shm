@@ -55,6 +55,10 @@ class PyFFI(object):
             self.register(cname+'*', DT)
         return DT
 
+    def defaultdict(self, keytype, valuetype, default_factory, cname=None, **kwds):
+        return self.dict(keytype, valuetype, default_factory=default_factory,
+                         cname=cname, **kwds)
+
     def set(self, itemtype, cname=None, **kwds):
         """
         Create a set type for the given ``itemtype``. If ``cname`` is given,

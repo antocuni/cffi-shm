@@ -199,7 +199,7 @@ def test_key_hash(pyffi):
 
 
 def test_defaultdict(pyffi):
-    DT = pyffi.dict('const char*', 'long', default=lambda: 42)
+    DT = pyffi.defaultdict('const char*', 'long', lambda: 42)
     d = DT()
     assert d['hello'] == 42
     assert 'hello' in d

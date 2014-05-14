@@ -56,7 +56,7 @@ lib = dictffi.verify(
 old_cwd.chdir()
 
 class DictType(AbstractGenericType):
-    def __init__(self, pyffi, keytype, valuetype, default=None):
+    def __init__(self, pyffi, keytype, valuetype, default_factory=None):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.nocopy = False # by default, keys are copied
@@ -64,7 +64,7 @@ class DictType(AbstractGenericType):
         self.c_cmp = None
         self.keytype = keytype
         self.valuetype = valuetype
-        self.default = default
+        self.default_factory = default_factory
         if cffi_is_string(self.ffi, keytype):
             self.keysize = self.ffi.cast('size_t', -1)
         elif cffi_is_struct_ptr(self.ffi, keytype):
@@ -104,8 +104,8 @@ class DictType(AbstractGenericType):
 
     def from_pointer(self, ptr):
         ptr = dictffi.cast('cfuhash_table_t*', ptr)
-        if self.default is not None:
-            return DefaultDictInstance(self, ptr, self.default)
+        if self.default_factory is not None:
+            return DefaultDictInstance(self, ptr, self.default_factory)
         else:
             return DictInstance(self, ptr)
 
