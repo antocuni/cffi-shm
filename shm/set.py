@@ -34,7 +34,16 @@ class SetInstance(object):
                                            addr)
 
     def add(self, item):
-        self.d[item] = 0
+        self.d[item] = 1
+
+    def remove(self, item):
+        del self.d[item]
+
+    def discard(self, item):
+        try:
+            self.remove(item)
+        except KeyError:
+            pass
 
     def __contains__(self, item):
         return item in self.d

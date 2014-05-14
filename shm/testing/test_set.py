@@ -23,3 +23,23 @@ def test___iter__(pyffi):
     s.add("bar")
     lst = sorted(list(s))
     assert lst == ["bar", "foo"]
+
+def test_remove(pyffi):
+    ST = pyffi.set('const char*')
+    s = ST()
+    s.add("foo")
+    s.add("bar")
+    s.remove("foo")
+    assert list(s) == ["bar"]
+    #
+    py.test.raises(KeyError, "s.remove('foo')")
+
+def test_discard(pyffi):
+    ST = pyffi.set('const char*')
+    s = ST()
+    s.add("foo")
+    s.add("bar")
+    s.discard("foo")
+    assert list(s) == ["bar"]
+    #
+    s.discard("foo") # check it does not raise
