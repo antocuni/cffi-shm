@@ -100,14 +100,21 @@ class DictType(AbstractGenericType):
         #
         if root:
             ptr = gclib.roots.add(dictffi, ptr)
-        return self.from_pointer(ptr)
+        # NOTE: it is very important that we call _from_ht and not
+        # from_pointer, because the latter does a cast, which means that the
+        # original cdata to which we attached the root is destroied, and thus
+        # the root is freed.
+        return self._from_ht(ptr)
 
     def from_pointer(self, ptr):
-        ptr = dictffi.cast('cfuhash_table_t*', ptr)
+        ht = dictffi.cast('cfuhash_table_t*', ptr)
+        return self._from_ht(ht)
+
+    def _from_ht(self, ht):
         if self.default_factory is not None:
-            return DefaultDictInstance(self, ptr, self.default_factory)
+            return DefaultDictInstance(self, ht, self.default_factory)
         else:
-            return DictInstance(self, ptr)
+            return DictInstance(self, ht)
 
 
 

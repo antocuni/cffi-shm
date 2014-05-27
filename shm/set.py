@@ -32,6 +32,8 @@ class SetInstance(object):
         addr = int(dictffi.cast('long', self.d.as_cdata()))
         return '<shm set [%s] at 0x%x>' % (self.settype.itemtype,
                                            addr)
+    def as_cdata(self):
+        return self.d.ht
 
     def add(self, item):
         self.d[item] = 1
