@@ -1,3 +1,4 @@
+import sys
 import py
 import cffi
 from shm import gclib
@@ -109,3 +110,12 @@ def test_DoubleOrNone():
     assert conv.from_python(42) == 42
     res = conv.from_python(None)
     assert res != res
+
+def test_LongOrNone():
+    from shm.converter import LongOrNone
+    conv = LongOrNone(None, None)
+    assert conv.to_python('42') == 42
+    assert conv.to_python(-sys.maxint-1) is None
+    #
+    assert conv.from_python(42) == 42
+    assert conv.from_python(None) == -sys.maxint-1

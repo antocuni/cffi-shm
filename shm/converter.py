@@ -1,3 +1,4 @@
+import sys
 from collections import defaultdict
 import cffi
 from shm import gclib
@@ -163,4 +164,26 @@ class DoubleOrNone(AbstractConverter):
     def from_python(self, obj, ensure_shm=True):
         if obj is None:
             return float('NaN')
+        return obj
+
+class LongOrNone(AbstractConverter):
+    """
+    Convert Python ints to and from C longs.
+    -sys.maxint-1 is converted to None
+
+    This converter is never used by default, it must be explicitly passed as a
+    custom converter.
+    """
+
+    sentinel = -sys.maxint-1
+
+    def to_python_impl(self, cdata):
+        value = int(cdata)
+        if value == self.sentinel:
+            return None
+        return value
+
+    def from_python(self, obj, ensure_shm=True):
+        if obj is None:
+            return self.sentinel
         return obj
