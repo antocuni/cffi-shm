@@ -103,6 +103,13 @@ def test_from_pointer(pyffi):
     assert d2['hello'] == 1
     assert d2['world'] == 2
 
+def test_long_key(pyffi):
+    DT = DictType(pyffi, 'long', 'long')
+    d = DT()
+    d[10] = 20
+    d[20] = 40
+    assert d[10] == 20
+    assert d[20] == 40
 
 def test_key_struct_byval(pyffi):
     ffi = pyffi.ffi

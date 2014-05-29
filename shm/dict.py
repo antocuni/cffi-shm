@@ -77,8 +77,11 @@ class DictType(AbstractGenericType):
             self.c_hash = pytype.__c_hash__
             self.c_cmp = pytype.__c_cmp__
         else: # primitive types
+            # by setting keysize to 0, we compare the void* pointers directly,
+            # not their content. Note that 'long' and 'double' keys will be
+            # casted to void*, and we surely don't want to dereference them :)            
             self.nocopy = True
-            self.keysize = self.ffi.sizeof(keytype)
+            self.keysize = 0
         #
         self.keyconverter = pyffi.get_converter(keytype, allow_structs_byval=True)
         self.valueconverter = pyffi.get_converter(valuetype)
@@ -137,7 +140,7 @@ class DictInstance(object):
         return self.ht
 
     def _key(self, key):
-        return self.dictype.keyconverter.from_python(key, ensure_shm=False)
+        return self.dictype.keyconverter.from_python(key, ensure_shm=False, as_voidp=True)
 
     def __getitem__(self, ckey):
         t = self.dictype

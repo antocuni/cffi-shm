@@ -25,7 +25,7 @@ class AbstractConverter(object):
     def to_python_impl(self, cdata):
         raise NotImplementedError
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         """
         Convert the given Python object into something which can be
         passed/stored as cdata. This includes the types which cffi handles
@@ -33,21 +33,33 @@ class AbstractConverter(object):
         for a 'char*' ctype.
 
         If ensure_shm==True, make sure that the returned cdata lives in shared
-        memory (and thus is it suitable to be e.g. stored in a struct.
+        memory (and thus is it suitable to be e.g. stored in a struct).
 
         If ensure_shm==False, it means that the object is intended to be used
         only immediately, and only in address space of the current
         process. E.g., it is useful for doing dictionary lookups in slave
         processes, where you cannot call GC_malloc.
+
+        If as_voidp==True, return something which can be passed to a function
+        expecting a void*. E.g., for primitive types a cast to void* is
+        necessary, but e.g. for strings it is done automatically (and moreover
+        strings cannot be explicitly casted to void*). Note that for all
+        converters which already returns a pointer, the cast is not necessary
+        as pointers are always convertible to void* anyway.
         """
         raise NotImplementedError
+
+    def _as_voidp_maybe(self, obj, as_voidp):
+        if as_voidp:
+            return self.ffi.cast('void*', obj)
+        return obj
 
 
 class Dummy(AbstractConverter):
     def to_python(self, cdata):
         return cdata
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         return obj
 
 
@@ -61,7 +73,7 @@ class StructPtr(AbstractConverter):
             return None
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         if obj is None:
             return self.ffi.NULL
         return obj.as_cdata()
@@ -78,7 +90,7 @@ class StructByVal(AbstractConverter):
             cdata = self.ffi.cast(ctype_ptr, cdata)
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         return obj.as_cdata()
 
 
@@ -92,7 +104,7 @@ class GenericTypePtr(AbstractConverter):
             return None
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         if obj is None:
             return self.ffi.NULL
         # obj.as_cdata returns the concrete type (e.g. List* from listffi),
@@ -106,7 +118,7 @@ class String(AbstractConverter):
             return None
         return self.ffi.string(cdata)
 
-    def from_python(self, s, ensure_shm=True):
+    def from_python(self, s, ensure_shm=True, as_voidp=False):
         if s is None:
             return self.ffi.NULL
         if ensure_shm:
@@ -122,7 +134,7 @@ class ArrayOfChar(AbstractConverter):
     def to_python_impl(self, cdata):
         return self.ffi.string(cdata)
 
-    def from_python(self, s, ensure_shm=True):
+    def from_python(self, s, ensure_shm=True, as_voidp=False):
         return s
 
 class Primitive(AbstractConverter):
@@ -143,8 +155,8 @@ class Primitive(AbstractConverter):
         self.buf[0] = cdata
         return self.buf[0]
 
-    def from_python(self, obj, ensure_shm=True):
-        return obj
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+        return self._as_voidp_maybe(obj, as_voidp)
 
 class DoubleOrNone(AbstractConverter):
     """
@@ -161,10 +173,10 @@ class DoubleOrNone(AbstractConverter):
             return None
         return value
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         if obj is None:
-            return float('NaN')
-        return obj
+            obj = float('NaN')
+        return self._as_voidp_maybe(obj, as_voidp)
 
 class LongOrNone(AbstractConverter):
     """
@@ -183,7 +195,7 @@ class LongOrNone(AbstractConverter):
             return None
         return value
 
-    def from_python(self, obj, ensure_shm=True):
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
         if obj is None:
-            return self.sentinel
-        return obj
+            obj = self.sentinel
+        return self._as_voidp_maybe(obj, as_voidp)

@@ -194,4 +194,4 @@ def test_custom_converter():
     obj = MyStruct(20)
     assert obj._ptr.x == 21
     assert obj.x == 42
-    
+
