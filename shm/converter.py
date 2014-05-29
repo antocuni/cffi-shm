@@ -211,11 +211,16 @@ class DateTimeConverter(AbstractConverter):
 
     def to_python_impl(self, cdata):
         value = float(cdata)
+        if value != value: # NaN:
+            return None
         return self.type.fromtimestamp(value)
 
     def from_python(self, obj, ensure_shm=True, as_voidp=False):
-        obj = time.mktime(obj.timetuple())
-        return self._as_voidp_maybe(obj, as_voidp)
+        if obj is None:
+            value = float('NaN')
+        else:
+            value = time.mktime(obj.timetuple())
+        return self._as_voidp_maybe(value, as_voidp)
 
 
 class DateConverter(DateTimeConverter):
@@ -231,12 +236,19 @@ class TimeConverter(AbstractConverter):
     number of seconds from midnight. Note that microseconds are lost.
     """
 
+    sentinel = -sys.maxint-1
+
     def to_python_impl(self, cdata):
         value = int(cdata)
+        if value == self.sentinel:
+            return None
         hhmm, ss = divmod(value, 60)
         hh, mm = divmod(hhmm, 60)
         return datetime.time(hh, mm, ss)
 
     def from_python(self, obj, ensure_shm=True, as_voidp=False):
-        value = obj.hour*3600 + obj.minute*60 + obj.second
+        if obj is None:
+            value = self.sentinel
+        else:
+            value = obj.hour*3600 + obj.minute*60 + obj.second
         return self._as_voidp_maybe(value, as_voidp)

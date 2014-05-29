@@ -129,8 +129,11 @@ def test_DateTimeConverter():
     assert isinstance(val, float)
     dt2 = conv.to_python(val)
     assert dt == dt2
+    #
+    val = conv.from_python(None)
+    assert conv.to_python(val) is None
 
-def test_DateTimeConverter():
+def test_DateConverter():
     from datetime import date
     from shm.converter import DateConverter
     conv = DateConverter(None, None)
@@ -139,6 +142,9 @@ def test_DateTimeConverter():
     assert isinstance(val, float)
     dt2 = conv.to_python(val)
     assert dt == dt2
+    #
+    val = conv.from_python(None)
+    assert conv.to_python(val) is None
 
 def test_TimeConverter():
     from datetime import time
@@ -148,3 +154,6 @@ def test_TimeConverter():
     val = conv.from_python(t)
     t2 = conv.to_python(val)
     assert t == t2
+    #
+    val = conv.from_python(None)
+    assert conv.to_python(val) is None
