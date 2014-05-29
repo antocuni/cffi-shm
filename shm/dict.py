@@ -165,6 +165,7 @@ class DictInstance(object):
 
     def __contains__(self, key):
         t = self.dictype
+        key = self._key(key)
         return bool(lib.cfuhash_exists_data(self.ht, key, t.keysize))
 
     def __delitem__(self, key):
