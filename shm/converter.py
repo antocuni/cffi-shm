@@ -223,3 +223,20 @@ class DateConverter(DateTimeConverter):
     Convert Python date objects to and from C doubles.
     """
     type = datetime.date
+
+
+class TimeConverter(AbstractConverter):
+    """
+    Convert Python datetime.time() to and from C longs. It is stored as the
+    number of seconds from midnight. Note that microseconds are lost.
+    """
+
+    def to_python_impl(self, cdata):
+        value = int(cdata)
+        hhmm, ss = divmod(value, 60)
+        hh, mm = divmod(hhmm, 60)
+        return datetime.time(hh, mm, ss)
+
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+        value = obj.hour*3600 + obj.minute*60 + obj.second
+        return self._as_voidp_maybe(value, as_voidp)

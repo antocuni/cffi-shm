@@ -139,3 +139,12 @@ def test_DateTimeConverter():
     assert isinstance(val, float)
     dt2 = conv.to_python(val)
     assert dt == dt2
+
+def test_TimeConverter():
+    from datetime import time
+    from shm.converter import TimeConverter
+    conv = TimeConverter(None, None)
+    t = time(12, 30, 40)
+    val = conv.from_python(t)
+    t2 = conv.to_python(val)
+    assert t == t2
