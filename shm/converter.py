@@ -1,4 +1,6 @@
 import sys
+import time
+import datetime
 from collections import defaultdict
 import cffi
 from shm import gclib
@@ -199,3 +201,25 @@ class LongOrNone(AbstractConverter):
         if obj is None:
             obj = self.sentinel
         return self._as_voidp_maybe(obj, as_voidp)
+
+
+class DateTimeConverter(AbstractConverter):
+    """
+    Convert Python datetime objects to and from C doubles.
+    """
+    type = datetime.datetime
+
+    def to_python_impl(self, cdata):
+        value = float(cdata)
+        return self.type.fromtimestamp(value)
+
+    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+        obj = time.mktime(obj.timetuple())
+        return self._as_voidp_maybe(obj, as_voidp)
+
+
+class DateConverter(DateTimeConverter):
+    """
+    Convert Python date objects to and from C doubles.
+    """
+    type = datetime.date

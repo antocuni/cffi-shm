@@ -119,3 +119,23 @@ def test_LongOrNone():
     #
     assert conv.from_python(42) == 42
     assert conv.from_python(None) == -sys.maxint-1
+
+def test_DateTimeConverter():
+    from datetime import datetime
+    from shm.converter import DateTimeConverter
+    conv = DateTimeConverter(None, None)
+    dt = datetime(1982, 5, 13, 12, 30, 10)
+    val = conv.from_python(dt)
+    assert isinstance(val, float)
+    dt2 = conv.to_python(val)
+    assert dt == dt2
+
+def test_DateTimeConverter():
+    from datetime import date
+    from shm.converter import DateConverter
+    conv = DateConverter(None, None)
+    dt = date(1982, 5, 13)
+    val = conv.from_python(dt)
+    assert isinstance(val, float)
+    dt2 = conv.to_python(val)
+    assert dt == dt2
