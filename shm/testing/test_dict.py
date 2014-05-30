@@ -92,6 +92,15 @@ def test_keys(pyffi):
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
 
+def test_update(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT()
+    d.update({'bar': 1, 'baz': 2})
+    d.update([('foo', 3)])
+    keys = d.keys()
+    assert sorted(keys) == ['bar', 'baz', 'foo']
+
+
 def test_from_pointer(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT()

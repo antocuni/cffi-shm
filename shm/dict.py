@@ -181,6 +181,14 @@ class DictInstance(object):
         except KeyError:
             return default
 
+    def update(self, d):
+        if hasattr(d, 'keys'):
+            items = d.items()
+        else:
+            items = d
+        for key, value in items:
+            self[key] = value
+
     def keys(self):
         t = self.dictype
         sizeptr = dictffi.new('size_t[1]')
