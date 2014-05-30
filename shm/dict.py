@@ -89,7 +89,7 @@ class DictType(AbstractGenericType):
     def __repr__(self):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
 
-    def __call__(self, root=True):
+    def __call__(self, init=None, root=True):
         with gclib.disabled:
             ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                                  gclib.lib.get_GC_free())
@@ -107,7 +107,10 @@ class DictType(AbstractGenericType):
         # from_pointer, because the latter does a cast, which means that the
         # original cdata to which we attached the root is destroied, and thus
         # the root is freed.
-        return self._from_ht(ptr)
+        d = self._from_ht(ptr)
+        if init is not None:
+            d.update(init)
+        return d
 
     def from_pointer(self, ptr):
         ht = dictffi.cast('cfuhash_table_t*', ptr)

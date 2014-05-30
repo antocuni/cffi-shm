@@ -100,6 +100,12 @@ def test_update(pyffi):
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
 
+def test_ctor(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT({'bar': 1, 'baz': 2, 'foo': 3})
+    keys = d.keys()
+    assert sorted(keys) == ['bar', 'baz', 'foo']
+
 
 def test_from_pointer(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
