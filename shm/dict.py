@@ -209,6 +209,22 @@ class DictInstance(object):
         finally:
             lib.free(keys_array)
 
+    def values(self):
+        vals = []
+        for k in self.keys():
+            vals.append(self[k])
+        return vals
+
+    def items(self):
+        res = []
+        for k in self.keys():
+            res.append((k, self[k]))
+        return res
+
+    iterkeys = keys
+    itervalues = values
+    iteritems = items
+
 class DefaultDictInstance(DictInstance):
 
     def __init__(self, dictype, ht, default_factory):

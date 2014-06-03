@@ -83,14 +83,21 @@ def test___delitem__(pyffi):
     assert 'hello' not in d
     py.test.raises(KeyError, "del d['foo']")
 
-def test_keys(pyffi):
+def test_keys_values_items(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT()
     d['foo'] = 1
     d['bar'] = 2
     d['baz'] = 3
+    #
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
+    #
+    values = d.values()
+    assert sorted(values) == [1, 2, 3]
+    #
+    items = d.items()
+    assert sorted(items) == [('bar', 2), ('baz', 3), ('foo', 1)]
 
 def test_update(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
