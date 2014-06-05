@@ -2,8 +2,7 @@
  * cfuhash.c - This file is part of the libcfu library
  *
  * Copyright (c) 2005 Don Owens. All rights reserved.
- *
- * Modified by Antonio Cuni
+ * Copyright (c) 2014 Antonio Cuni. All rights reserved.
  *
  * This code is released under the BSD license:
  *
