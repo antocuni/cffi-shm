@@ -1,6 +1,5 @@
 import cffi
 import _cffi_backend
-from shm import gclib
 from shm.converter import Dummy
 from shm.util import ctype_pointer_to, cffi_typeof
 from shm.pyffi import AbstractGenericType

@@ -90,8 +90,9 @@ class DictType(AbstractGenericType):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
 
     def __call__(self, init=None, root=True):
-        ptr = lib.cfuhash_new_with_malloc_fn(sharedmem.get_GC_malloc(),
-                                             sharedmem.get_GC_free())
+        with sharedmem.gc_disabled:
+            ptr = lib.cfuhash_new_with_malloc_fn(sharedmem.get_GC_malloc(),
+                                                 sharedmem.get_GC_free())
         if self.nocopy:
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
         if self.c_hash:

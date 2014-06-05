@@ -28,6 +28,7 @@ class RW_shm(object):
     def open_readonly(self, path):
         raise ValueError('sharedmem already initialized in RW mode: %s' % self.path)
 
+    gc_disabled = gclib.disabled
     get_GC_malloc = gclib.lib.get_GC_malloc
     get_GC_free = gclib.lib.get_GC_free
     roots = gclib.roots
@@ -49,6 +50,7 @@ class RO_shm(object):
     
     get_GC_free = get_GC_malloc
     roots = property(get_GC_malloc)
-        
+    gc_disabled = property(get_GC_malloc)
+
 
 sharedmem = Uninitialized_shm()
