@@ -1,7 +1,7 @@
 import py
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.testing.test_dict import ffi, pyffi
-gclib.init('/cffi-shm-testing')
+sharedmem.init('/cffi-shm-testing')
 
 def test_SetType(pyffi):
     ST = pyffi.set('long')
