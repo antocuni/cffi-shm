@@ -41,6 +41,25 @@ dictffi.cdef("""
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
     unsigned int cfuhash_clear_flag(cfuhash_table_t *ht, unsigned int new_flag);
 
+    typedef enum {
+        cfuhash_fieldspec_stop=0,
+        cfuhash_primitive,
+        cfuhash_pointer, 
+        cfuhash_string
+    } cfuhash_fieldkind_t;
+
+    typedef struct cfuhash_fieldspec {
+        cfuhash_fieldkind_t kind;
+        size_t offset;
+        union {
+            size_t size;
+            struct cfuhash_fieldspec *fieldspec;
+        };
+    } cfuhash_fieldspec_t;
+
+    int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
+
+
     void free(void* ptr); /* stdlib's free */
 """)
 

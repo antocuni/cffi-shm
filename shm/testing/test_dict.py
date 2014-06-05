@@ -2,7 +2,7 @@ import py
 import pytest
 import cffi
 from shm.sharedmem import sharedmem
-from shm.dict import lib, DictType
+from shm.dict import dictffi, lib, DictType
 from shm.pyffi import PyFFI
 sharedmem.init('/cffi-shm-testing')
 
@@ -43,6 +43,40 @@ def test_libcfu_gc(ffi):
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
+
+def test_libcfu_generic_cmp(ffi):
+    ffi.cdef("""
+        typedef struct {
+            long x;
+            long y;
+            long z;
+        } Point;
+    """)
+    def Point(x, y, z):
+        p = ffi.new('Point*')
+        p.x = x
+        p.y = y
+        p.z = z
+        return p
+    #
+    point_spec = dictffi.new('cfuhash_fieldspec_t[]', 4)
+    for i, fieldname in enumerate(['x', 'y', 'z']):
+        point_spec[i].kind = lib.cfuhash_primitive
+        point_spec[i].offset = ffi.offsetof('Point', fieldname)
+        point_spec[i].size = ffi.sizeof('long')
+    point_spec[i+1].kind = lib.cfuhash_fieldspec_stop
+    #
+    p1 = Point(1, 2, 3)
+    p2 = Point(1, 2, 3)
+    p3 = Point(1, 2, 300)
+    assert lib.cfuhash_generic_cmp(point_spec, p1, p2) == 0
+    assert lib.cfuhash_generic_cmp(point_spec, p1, p3) < 0
+    assert lib.cfuhash_generic_cmp(point_spec, p3, p1) > 0
+    #
+    # now we "cut" the fieldspec to ignore z, so that p1 and p3 are equal
+    point_spec[2].kind = lib.cfuhash_fieldspec_stop
+    assert lib.cfuhash_generic_cmp(point_spec, p1, p3) == 0
+
 
 def test_DictType(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')

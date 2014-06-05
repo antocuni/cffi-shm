@@ -278,6 +278,25 @@ void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 #define CFUHASH_IGNORE_CASE (1 << 5) /* treat keys case-insensitively */
 
 
+/* generic hash and cmp functions */
+typedef enum { 
+    cfuhash_fieldspec_stop=0,
+    cfuhash_primitive,
+    cfuhash_pointer, 
+    cfuhash_string
+} cfuhash_fieldkind_t;
+
+typedef struct cfuhash_fieldspec {
+    cfuhash_fieldkind_t kind;
+    size_t offset;
+    union {
+        size_t size;
+        struct cfuhash_fieldspec *fieldspec;
+    };
+} cfuhash_fieldspec_t;
+
+int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
+
 CFU_END_DECLS
 
 #endif
