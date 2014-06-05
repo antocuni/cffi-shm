@@ -93,7 +93,7 @@ def init(path):
     if not ret:
         raise OSError('Failed to initialized the shm GC')
 
-def open(path):
+def open_readonly(path):
     if path.count('/') != 1:
         raise OSError('%r should contain exactly one slash' % path)
     ret = lib.GC_open(path)
