@@ -1,6 +1,6 @@
 import py
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.pyffi import AbstractGenericType
 from shm.util import cffi_is_string, cffi_is_struct_ptr, cffi_is_struct
 
@@ -90,9 +90,8 @@ class DictType(AbstractGenericType):
         return '<shm type dict [%s: %s]>' % (self.keytype, self.valuetype)
 
     def __call__(self, init=None, root=True):
-        with gclib.disabled:
-            ptr = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
-                                                 gclib.lib.get_GC_free())
+        ptr = lib.cfuhash_new_with_malloc_fn(sharedmem.get_GC_malloc(),
+                                             sharedmem.get_GC_free())
         if self.nocopy:
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
         if self.c_hash:
@@ -102,7 +101,7 @@ class DictType(AbstractGenericType):
             lib.cfuhash_set_cmp_function(ptr, c_cmp)
         #
         if root:
-            ptr = gclib.roots.add(dictffi, ptr)
+            ptr = sharedmem.roots.add(dictffi, ptr)
         # NOTE: it is very important that we call _from_ht and not
         # from_pointer, because the latter does a cast, which means that the
         # original cdata to which we attached the root is destroied, and thus

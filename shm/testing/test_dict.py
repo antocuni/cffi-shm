@@ -1,10 +1,10 @@
 import py
 import pytest
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.dict import lib, DictType
 from shm.pyffi import PyFFI
-gclib.init('/cffi-shm-testing')
+sharedmem.init('/cffi-shm-testing')
 
 @pytest.fixture
 def ffi():
@@ -24,6 +24,7 @@ def check_dict(ffi, d):
     assert int(ffi.cast("long", value)) == 42
 
 def test_libcfu(ffi):
+    from shm import gclib
     # first, we check that it works with the system malloc
     d = lib.cfuhash_new()
     check_dict(ffi, d)
@@ -33,6 +34,7 @@ def test_libcfu(ffi):
     assert d < gc_base_mem
 
 def test_libcfu_gc(ffi):
+    from shm import gclib
     # then, we check that it works with the the GC malloc
     d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                        gclib.lib.get_GC_free())
