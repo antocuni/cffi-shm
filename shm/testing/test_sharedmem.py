@@ -21,7 +21,8 @@ def test_init():
     my_sharedmem.init('/foo')
     assert isinstance(my_sharedmem, RW_shm)
     assert MySharedMemory.gclib.status == ('rw', '/foo')
-    py.test.raises(ValueError, "my_sharedmem.init('/foo')")
+    my_sharedmem.init('/foo') # does not crash
+    py.test.raises(ValueError, "my_sharedmem.init('/bar')")
     py.test.raises(ValueError, "my_sharedmem.open_readonly('/foo')")
 
 def test_open_readonly():
@@ -29,5 +30,6 @@ def test_open_readonly():
     my_sharedmem.open_readonly('/foo')
     assert isinstance(my_sharedmem, RO_shm)
     assert MySharedMemory.gclib.status == ('ro', '/foo')
+    my_sharedmem.open_readonly('/foo') # does not crash
     py.test.raises(ValueError, "my_sharedmem.init('/foo')")
-    py.test.raises(ValueError, "my_sharedmem.open_readonly('/foo')")
+    py.test.raises(ValueError, "my_sharedmem.open_readonly('/bar')")
