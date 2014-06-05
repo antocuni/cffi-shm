@@ -1,9 +1,9 @@
 import py
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.pyffi import PyFFI
 from shm.converter import AbstractConverter
-gclib.init('/cffi-shm-testing')
+sharedmem.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
 
@@ -105,6 +105,7 @@ def test_c_hash():
     assert h == hash(p1) & 0xFFFFFFFF
 
 def test_string():
+    from shm import gclib
     ffi = cffi.FFI()
     ffi.cdef("""
         typedef struct {

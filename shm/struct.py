@@ -1,5 +1,5 @@
 import py
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity, ctype_pointer_to)
 
@@ -64,7 +64,7 @@ class StructDecorator(object):
 
     def add_ctor(self, cls):
         # def _init(self, x, y):
-        #     self._ptr = gclib.new(self.pyffi.ffi, self.ctype)
+        #     self._ptr = sharedmem.new(self.pyffi.ffi, self.ctype)
         #     self.__set_x(x)
         #     self.__set_y(y)
         #
@@ -72,13 +72,13 @@ class StructDecorator(object):
         #     self._init(x, y)
         paramlist = ', '.join(self.fieldnames)
         bodylines = []
-        bodylines.append('self._ptr = gclib.new(self.pyffi.ffi, self.ctype)')
+        bodylines.append('self._ptr = sharedmem.new(self.pyffi.ffi, self.ctype)')
         for fieldname in self.fieldnames:
             line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
         _init = body.putaround('def _init(self, %s):' % paramlist)
-        cls._init = compile_def(_init, gclib=gclib)
+        cls._init = compile_def(_init, sharedmem=sharedmem)
         #
         # we add the proper __init__ only if it's not already defined
         if '__init__' in cls.__dict__:
