@@ -44,6 +44,18 @@ def test_libcfu_gc(ffi):
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
 
+def make_fieldspec(ffi, t, spec):
+    n = len(spec)+1
+    fields = dict(ffi.typeof(t).fields)
+    fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
+    for i, (fieldname, kind) in enumerate(spec):
+        fieldspec[i].kind = kind
+        fieldspec[i].offset = ffi.offsetof(t, fieldname)
+        fieldspec[i].size = ffi.sizeof(fields[fieldname].type)
+    fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
+    return fieldspec
+    
+
 def test_libcfu_generic_cmp(ffi):
     ffi.cdef("""
         typedef struct {
@@ -59,13 +71,9 @@ def test_libcfu_generic_cmp(ffi):
         p.z = z
         return p
     #
-    point_spec = dictffi.new('cfuhash_fieldspec_t[]', 4)
-    for i, fieldname in enumerate(['x', 'y', 'z']):
-        point_spec[i].kind = lib.cfuhash_primitive
-        point_spec[i].offset = ffi.offsetof('Point', fieldname)
-        point_spec[i].size = ffi.sizeof('long')
-    point_spec[i+1].kind = lib.cfuhash_fieldspec_stop
-    #
+    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
+                                               ('y', lib.cfuhash_primitive),
+                                               ('z', lib.cfuhash_primitive)])
     p1 = Point(1, 2, 3)
     p2 = Point(1, 2, 3)
     p3 = Point(1, 2, 300)
@@ -96,13 +104,8 @@ def test_libcfu_generic_cmp_string(ffi):
         p.surname = surname
         return p
     #
-    person_spec = dictffi.new('cfuhash_fieldspec_t[]', 3)
-    for i, fieldname in enumerate(['name', 'surname']):
-        person_spec[i].kind = lib.cfuhash_string
-        person_spec[i].offset = ffi.offsetof('Person', fieldname)
-        person_spec[i].size = 0
-    person_spec[i+1].kind = lib.cfuhash_fieldspec_stop
-    #
+    person_spec = make_fieldspec(ffi, 'Person', [('name', lib.cfuhash_string),
+                                                 ('surname', lib.cfuhash_string)])
     p1 = Person('Hello', 'World')
     p2 = Person('Hello', 'World')
     p3 = Person('Hello', 'ZZZ')
