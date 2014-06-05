@@ -77,6 +77,43 @@ def test_libcfu_generic_cmp(ffi):
     point_spec[2].kind = lib.cfuhash_fieldspec_stop
     assert lib.cfuhash_generic_cmp(point_spec, p1, p3) == 0
 
+def test_libcfu_generic_cmp_string(ffi):
+    ffi.cdef("""
+        typedef struct {
+            const char* name;
+            const char* surname;
+        } Person;
+    """)
+    keepalive = []
+    def Person(name, surname):
+        name = ffi.new('char[]', name)
+        surname = ffi.new('char[]', surname)
+        keepalive.append(name)
+        keepalive.append(surname)
+        #
+        p = ffi.new('Person*')
+        p.name = name
+        p.surname = surname
+        return p
+    #
+    person_spec = dictffi.new('cfuhash_fieldspec_t[]', 3)
+    for i, fieldname in enumerate(['name', 'surname']):
+        person_spec[i].kind = lib.cfuhash_string
+        person_spec[i].offset = ffi.offsetof('Person', fieldname)
+        person_spec[i].size = 0
+    person_spec[i+1].kind = lib.cfuhash_fieldspec_stop
+    #
+    p1 = Person('Hello', 'World')
+    p2 = Person('Hello', 'World')
+    p3 = Person('Hello', 'ZZZ')
+    assert lib.cfuhash_generic_cmp(person_spec, p1, p2) == 0
+    assert lib.cfuhash_generic_cmp(person_spec, p1, p3) < 0
+    assert lib.cfuhash_generic_cmp(person_spec, p3, p1) > 0
+    #
+    # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
+    person_spec[1].kind = lib.cfuhash_fieldspec_stop
+    assert lib.cfuhash_generic_cmp(person_spec, p1, p3) == 0
+
 
 def test_DictType(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')

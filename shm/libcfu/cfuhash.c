@@ -951,8 +951,10 @@ cfuhash_num_buckets_used(cfuhash_table_t *ht) {
 
 int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 {
-    char* a = (char*)key1;
-    char* b = (char*)key2;
+    unsigned char* a = (unsigned char*)key1;
+    unsigned char* b = (unsigned char*)key2;
+    char* str_a = NULL;
+    char* str_b = NULL;
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
@@ -962,6 +964,11 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
         switch(field->kind) {
         case cfuhash_primitive:
             cmp = memcmp(a+field->offset, b+field->offset, field->size);
+            break;
+        case cfuhash_string:
+            str_a = *(char**)(a+field->offset);
+            str_b = *(char**)(b+field->offset);
+            cmp = strcmp(str_a, str_b);
             break;
         default:
             fprintf(stderr, "Unknown field kind: %d\n", field->kind);
