@@ -1,9 +1,9 @@
 import sys
 import py
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.pyffi import PyFFI
-gclib.init('/cffi-shm-testing')
+sharedmem.init('/cffi-shm-testing')
 
 def test_register():
     ffi = cffi.FFI()
@@ -66,6 +66,7 @@ def test_StructConverter():
     assert conv.to_python(ffi.NULL) is None
 
 def test_StringConverter():
+    from shm import gclib
     ffi = cffi.FFI()
     pyffi = PyFFI(ffi)
     conv = pyffi.get_converter('const char*')

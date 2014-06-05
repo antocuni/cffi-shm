@@ -3,7 +3,7 @@ import time
 import datetime
 from collections import defaultdict
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.util import ctype_pointer_to, ctype_array_of
 
 class AbstractConverter(object):
@@ -124,7 +124,7 @@ class String(AbstractConverter):
         if s is None:
             return self.ffi.NULL
         if ensure_shm:
-            return gclib.new_string(s)
+            return sharedmem.new_string(s)
         else:
             return s
 

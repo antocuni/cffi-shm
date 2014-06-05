@@ -30,6 +30,7 @@ class RW_shm(object):
 
     new = staticmethod(gclib.new)
     new_array = staticmethod(gclib.new_array)
+    new_string = staticmethod(gclib.new_string)
     realloc_array = staticmethod(gclib.realloc_array)
     gc_disabled = gclib.disabled
     get_GC_malloc = gclib.lib.get_GC_malloc
@@ -53,6 +54,7 @@ class RO_shm(object):
 
     new = _not_implemented
     new_array = _not_implemented
+    new_string = _not_implemented
     realloc_array = _not_implemented
     gc_disabled = property(_not_implemented)
     get_GC_malloc = _not_implemented
