@@ -99,3 +99,41 @@ def test_dict(tmpdir):
     d['world'] = 2
     dict_addr = int(ffi.cast('long', d.ht))
     assert exec_child(tmpdir, child, PATH, dict_addr)
+
+
+def test_dict_complex_key(tmpdir):
+    def child(path, dict_addr):
+        import cffi
+        from shm.sharedmem import SharedMemory
+        from shm.pyffi import PyFFI
+        #
+        ffi = cffi.FFI()
+        pyffi = PyFFI(ffi)
+        ffi.cdef("""
+            typedef struct {
+                const char* name;
+                const char* surname;
+            } Person;
+        """)
+        Person = pyffi.struct('Person')
+        PersonDict = pyffi.dict('Person', 'long')
+        mem = SharedMemory.open(path)
+        d = PersonDict.from_pointer(dict_addr)
+        assert d[Person('Hello', 'World')] == 1
+        assert d[Person('Foo', 'Bar')] == 2
+
+    ffi = cffi.FFI()
+    pyffi = PyFFI(ffi)
+    ffi.cdef("""
+        typedef struct {
+            const char* name;
+            const char* surname;
+        } Person;
+    """)
+    Person = pyffi.struct('Person')
+    PersonDict = pyffi.dict('Person', 'long')
+    d = PersonDict()
+    d[Person('Hello', 'World')] = 1
+    d[Person('Foo', 'Bar')] = 2
+    dict_addr = int(ffi.cast('long', d.ht))
+    assert exec_child(tmpdir, child, PATH, dict_addr)
