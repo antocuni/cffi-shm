@@ -1,5 +1,6 @@
 import cffi
 import _cffi_backend
+from shm.sharedmem import sharedmem
 from shm.converter import Dummy
 from shm.util import ctype_pointer_to, cffi_typeof
 from shm.pyffi import AbstractGenericType
@@ -35,11 +36,11 @@ class ListType(AbstractGenericType):
         return '<shm type list [%s]>' % self.itemtype
 
     def __call__(self, items=None, root=True):
-        with gclib.disabled:
-            ptr = gclib.new(listffi, 'List*', root)
+        with sharedmem.gc_disabled:
+            ptr = sharedmem.new(listffi, 'List*', root)
             # even for empty lists, we start by allocating 2 items, and then
             # growing
-            ptr.items = gclib.new_array(self.ffi, self.itemtype, 2)
+            ptr.items = sharedmem.new_array(self.ffi, self.itemtype, 2)
             ptr.size = 2
             ptr.length = 0
         lst = self.listclass.from_pointer(self, ptr)
@@ -79,7 +80,7 @@ class FixedSizeList(object):
         lst = self.lst
         if newsize <= lst.size:
             return
-        lst.items = gclib.realloc_array(t.ffi, t.itemtype, lst.items, newsize)
+        lst.items = sharedmem.realloc_array(t.ffi, t.itemtype, lst.items, newsize)
         lst.size = newsize
 
     def _setitem(self, n, item):

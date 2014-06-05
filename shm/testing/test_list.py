@@ -1,9 +1,9 @@
 import py
 import cffi
-from shm import gclib
+from shm.sharedmem import sharedmem
 from shm.pyffi import PyFFI
 from shm.list import ListType, FixedSizeList, ResizableList
-gclib.init('/cffi-shm-testing')
+sharedmem.init('/cffi-shm-testing')
 
 @py.test.fixture
 def pyffi():

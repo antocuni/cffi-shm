@@ -28,6 +28,9 @@ class RW_shm(object):
     def open_readonly(self, path):
         raise ValueError('sharedmem already initialized in RW mode: %s' % self.path)
 
+    new = staticmethod(gclib.new)
+    new_array = staticmethod(gclib.new_array)
+    realloc_array = staticmethod(gclib.realloc_array)
     gc_disabled = gclib.disabled
     get_GC_malloc = gclib.lib.get_GC_malloc
     get_GC_free = gclib.lib.get_GC_free
@@ -45,12 +48,16 @@ class RO_shm(object):
             return
         raise ValueError('sharedmem already opened: %s' % self.path)
 
-    def get_GC_malloc(self):
+    def _not_implemented(self, *args, **kwargs):
         raise NotImplementedError("Not available in read-only mode")
-    
-    get_GC_free = get_GC_malloc
-    roots = property(get_GC_malloc)
-    gc_disabled = property(get_GC_malloc)
+
+    new = _not_implemented
+    new_array = _not_implemented
+    realloc_array = _not_implemented
+    gc_disabled = property(_not_implemented)
+    get_GC_malloc = _not_implemented
+    get_GC_free = _not_implemented
+    roots = property(_not_implemented)
 
 
 sharedmem = Uninitialized_shm()
