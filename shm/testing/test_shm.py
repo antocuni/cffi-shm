@@ -3,14 +3,13 @@ import sys
 import os
 import cffi
 import shm
-from shm import gclib
 from shm.sharedmem import sharedmem
 from shm.list import ListType
 from shm.dict import DictType
 from shm.pyffi import PyFFI
 
 PATH = '/cffi-shm-testing'
-gclib.init(PATH)
+sharedmem.init(PATH)
 
 def exec_child(tmpdir, fn, *args):
     rootdir = py.path.local(shm.__file__).dirpath('..')
@@ -50,7 +49,7 @@ def test_sharedmem(tmpdir):
         assert ffi.string(rawstr) == 'hello world'
 
     ffi = cffi.FFI()
-    rawstr = gclib.new_string('hello world')
+    rawstr = sharedmem.new_string('hello world')
     str_addr = int(ffi.cast('long', rawstr))
     assert exec_child(tmpdir, child, PATH, str_addr)
 
