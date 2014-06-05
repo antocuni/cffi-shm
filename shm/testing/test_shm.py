@@ -4,7 +4,7 @@ import os
 import cffi
 import shm
 from shm import gclib
-from shm.sharedmem import SharedMemory
+from shm.sharedmem import sharedmem
 from shm.list import ListType
 from shm.dict import DictType
 from shm.pyffi import PyFFI
@@ -42,10 +42,10 @@ def test_exec_child(tmpdir):
 def test_sharedmem(tmpdir):
     def child(path, str_addr):
         import cffi
-        from shm.sharedmem import SharedMemory
+        from shm.sharedmem import sharedmem
         #
         ffi = cffi.FFI()
-        mem = SharedMemory.open(path)
+        sharedmem.open_readonly(path)
         rawstr = ffi.cast('char*', str_addr)
         assert ffi.string(rawstr) == 'hello world'
 
@@ -58,12 +58,12 @@ def test_sharedmem(tmpdir):
 def test_list(tmpdir):
     def child(path, list_addr):
         import cffi
-        from shm.sharedmem import SharedMemory
+        from shm.sharedmem import sharedmem
         from shm.pyffi import PyFFI
         from shm.list import ListType
         #
         pyffi = PyFFI(cffi.FFI())
-        mem = SharedMemory.open(path)
+        sharedmem.open_readonly(path)
         LT = ListType(pyffi, 'long')
         lst = LT.from_pointer(list_addr)
         assert list(lst) == range(100)
@@ -79,13 +79,13 @@ def test_list(tmpdir):
 def test_dict(tmpdir):
     def child(path, dict_addr):
         import cffi
-        from shm.sharedmem import SharedMemory
+        from shm.sharedmem import sharedmem
         from shm.pyffi import PyFFI
         from shm.dict import DictType
         #
         pyffi = PyFFI(cffi.FFI())
         DT = DictType(pyffi, 'const char*', 'long')
-        mem = SharedMemory.open(path)
+        sharedmem.open_readonly(path)
         d = DT.from_pointer(dict_addr)
         assert d['hello'] == 1
         assert d['world'] == 2
@@ -104,7 +104,7 @@ def test_dict(tmpdir):
 def test_dict_complex_key(tmpdir):
     def child(path, dict_addr):
         import cffi
-        from shm.sharedmem import SharedMemory
+        from shm.sharedmem import sharedmem
         from shm.pyffi import PyFFI
         #
         ffi = cffi.FFI()
@@ -117,7 +117,7 @@ def test_dict_complex_key(tmpdir):
         """)
         Person = pyffi.struct('Person')
         PersonDict = pyffi.dict('Person', 'long')
-        mem = SharedMemory.open(path)
+        sharedmem.open_readonly(path)
         d = PersonDict.from_pointer(dict_addr)
         assert d[Person('Hello', 'World')] == 1
         assert d[Person('Foo', 'Bar')] == 2
