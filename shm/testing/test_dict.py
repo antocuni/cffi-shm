@@ -126,10 +126,21 @@ def test_libcfu_generic_cmp_string(ffi):
     assert lib.cfuhash_generic_cmp(person_spec, p1, p3) < 0
     assert lib.cfuhash_generic_cmp(person_spec, p3, p1) > 0
     #
+    h1 = lib.cfuhash_generic_hash(person_spec, p1)
+    h2 = lib.cfuhash_generic_hash(person_spec, p2)
+    h3 = lib.cfuhash_generic_hash(person_spec, p3)
+    assert h1 == h2
+    assert h1 != h3
+    #
+    #
     # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
     person_spec[1].kind = lib.cfuhash_fieldspec_stop
     assert lib.cfuhash_generic_cmp(person_spec, p1, p3) == 0
-
+    #
+    h1 = lib.cfuhash_generic_hash(person_spec, p1)
+    h2 = lib.cfuhash_generic_hash(person_spec, p2)
+    h3 = lib.cfuhash_generic_hash(person_spec, p3)
+    assert h1 == h2 == h3
 
 def test_libcfu_generic_cmp_pointer(ffi):
     ffi.cdef("""

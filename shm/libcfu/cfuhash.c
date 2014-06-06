@@ -1011,6 +1011,10 @@ unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key)
         case cfuhash_primitive:
             hv = hash_func_part(hv, a+offset, field->size);
             break;
+        case cfuhash_string:
+            field_a = *(char**)(a+offset);
+            hv = hash_func_part(hv, field_a, strlen(field_a));
+            break;
         default:
             fprintf(stderr, "cfuhash_generic_hash: unknown field kind: %d\n", field->kind);
             abort();
