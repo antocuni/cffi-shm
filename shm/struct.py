@@ -115,12 +115,19 @@ class StructDecorator(object):
         fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
         for i, (fieldname, field) in enumerate(self.ctype.item.fields):
             f = fieldspec[i]
+            f.offset = field.offset
             if field.type.kind == 'primitive':
                 f.kind = lib.cfuhash_primitive
-                f.offset = field.offset
                 f.size = self.ffi.sizeof(field.type)
+            elif cffi_is_string(self.ffi, field.type):
+                f.kind = lib.cfuhash_string
+                f.size = 0
+            elif cffi_is_struct_ptr(self.ffi, field.type):
+                pytype = self.pyffi.pytypeof(field.type)
+                f.kind = lib.cfuhash_pointer
+                f.fieldspec = pytype.__fieldspec__
             else:
-                import pdb;pdb.set_trace()
+                assert False, 'unknown field kind'
         #
         fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
         cls.__fieldspec__ = fieldspec

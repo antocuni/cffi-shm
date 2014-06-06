@@ -95,6 +95,13 @@ def test_equality_hash():
     assert p1 == p2
     assert p1 != None # check that the exception is not propagated outside __eq__
 
+def check_fieldspec(spec, kind, offset, size, fieldspec=None):
+    assert kind is None or spec.kind == kind
+    assert offset is None or spec.offset == offset
+    assert size is None or spec.size == size
+    assert fieldspec is None or spec.fieldspec == fieldspec
+    
+
 def test_fieldspec():
     from shm import gclib
     from shm.dict import lib
@@ -103,7 +110,7 @@ def test_fieldspec():
         typedef struct {
             long x;
             long y;
-            char color;
+            char c;
         } Point;
         typedef struct {
             const char* name;
@@ -112,19 +119,21 @@ def test_fieldspec():
     """)
     pyffi = PyFFI(ffi)
     Point = pyffi.struct('Point')
-    point_spec = Point.__fieldspec__
-    assert len(point_spec) == 4
-    assert point_spec[0].kind == lib.cfuhash_primitive
-    assert point_spec[0].offset == 0
-    assert point_spec[0].size == ffi.sizeof('long')
-    assert point_spec[1].kind == lib.cfuhash_primitive
-    assert point_spec[1].offset == ffi.offsetof('Point', 'y')
-    assert point_spec[1].size == ffi.sizeof('long')
-    assert point_spec[2].kind == lib.cfuhash_primitive
-    assert point_spec[2].offset == ffi.offsetof('Point', 'color')
-    assert point_spec[2].size == ffi.sizeof('char')
-    assert point_spec[3].kind == lib.cfuhash_fieldspec_stop
-
+    ps = Point.__fieldspec__
+    assert len(ps) == 4
+    prim = lib.cfuhash_primitive
+    string = lib.cfuhash_string
+    pointer = lib.cfuhash_pointer
+    check_fieldspec(ps[0], prim, ffi.offsetof('Point', 'x'), ffi.sizeof('long'))
+    check_fieldspec(ps[1], prim, ffi.offsetof('Point', 'y'), ffi.sizeof('long'))
+    check_fieldspec(ps[2], prim, ffi.offsetof('Point', 'c'), ffi.sizeof('char'))
+    check_fieldspec(ps[3], lib.cfuhash_fieldspec_stop, None, None)
+    #
+    NamedPoint = pyffi.struct('NamedPoint')
+    nps = NamedPoint.__fieldspec__
+    check_fieldspec(nps[0], string, offset=None, size=0)
+    check_fieldspec(nps[1], pointer, offset=None, size=None, fieldspec=ps)
+    check_fieldspec(nps[2], lib.cfuhash_fieldspec_stop, None, None)
 
 def test_string():
     from shm import gclib
