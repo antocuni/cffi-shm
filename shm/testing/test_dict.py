@@ -56,7 +56,7 @@ def make_fieldspec(ffi, t, spec):
     return fieldspec
     
 
-def test_libcfu_generic_cmp(ffi):
+def test_libcfu_generic_cmp_primitive(ffi):
     ffi.cdef("""
         typedef struct {
             long x;
@@ -116,6 +116,58 @@ def test_libcfu_generic_cmp_string(ffi):
     # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
     person_spec[1].kind = lib.cfuhash_fieldspec_stop
     assert lib.cfuhash_generic_cmp(person_spec, p1, p3) == 0
+
+
+def test_libcfu_generic_cmp_pointer(ffi):
+    ffi.cdef("""
+        typedef struct {
+            long x;
+            long y;
+        } Point;
+
+        typedef struct  {
+            Point *a;
+            Point *b;
+        } Rectangle;
+    """)
+    keepalive = []
+    def Point(x, y):
+        p = ffi.new('Point*')
+        p.x = x
+        p.y = y
+        keepalive.append(p)
+        return p
+    def Rectangle(a, b):
+        r = ffi.new('Rectangle*')
+        r.a = a
+        r.b = b
+        keepalive.append(r)
+        return r
+    #
+    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
+                                               ('y', lib.cfuhash_primitive)])
+    rect_spec = make_fieldspec(ffi, 'Rectangle', [('a', lib.cfuhash_primitive),
+                                                  ('b', lib.cfuhash_primitive)])
+    p1 = Point(1, 2)
+    p2 = Point(1, 2)
+    p3 = Point(3, 4)
+    #
+    r1 = Rectangle(p1, p1)
+    r2 = Rectangle(p2, p2)
+    r3 = Rectangle(p3, p3)
+    #
+    # Rectangle.{a,b} are compared as primitive fields, so r1 and r2 are
+    # different
+    assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) != 0
+    assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
+    #
+    # fix rect_spec to compare a and b as pointers
+    rect_spec[0].kind = lib.cfuhash_pointer
+    rect_spec[0].fieldspec = point_spec
+    rect_spec[1].kind = lib.cfuhash_pointer
+    rect_spec[1].fieldspec = point_spec
+    assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
+    assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
 
 
 def test_DictType(pyffi):
