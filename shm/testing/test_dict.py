@@ -81,9 +81,22 @@ def test_libcfu_generic_cmp_primitive(ffi):
     assert lib.cfuhash_generic_cmp(point_spec, p1, p3) < 0
     assert lib.cfuhash_generic_cmp(point_spec, p3, p1) > 0
     #
+    h1 = lib.cfuhash_generic_hash(point_spec, p1)
+    h2 = lib.cfuhash_generic_hash(point_spec, p2)
+    h3 = lib.cfuhash_generic_hash(point_spec, p3)
+    assert h1 == h2
+    assert h1 != h3
+    #
+    #
     # now we "cut" the fieldspec to ignore z, so that p1 and p3 are equal
     point_spec[2].kind = lib.cfuhash_fieldspec_stop
     assert lib.cfuhash_generic_cmp(point_spec, p1, p3) == 0
+    #
+    h1 = lib.cfuhash_generic_hash(point_spec, p1)
+    h2 = lib.cfuhash_generic_hash(point_spec, p2)
+    h3 = lib.cfuhash_generic_hash(point_spec, p3)
+    assert h1 == h2 == h3
+
 
 def test_libcfu_generic_cmp_string(ffi):
     ffi.cdef("""

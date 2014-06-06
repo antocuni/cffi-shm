@@ -100,20 +100,30 @@ struct cfuhash_table {
 
 /* Perl's hash function */
 static unsigned int
-hash_func(const void *key, size_t length) {
+hash_func_part(unsigned int hv, const void *key, size_t length) {
 	register size_t i = length;
-	register unsigned int hv = 0; /* could put a seed here instead of zero */
 	register const unsigned char *s = (const unsigned char *)key;
 	while (i--) {
 		hv += *s++;
 		hv += (hv << 10);
 		hv ^= (hv >> 6);
 	}
+    return hv;
+}
+
+static unsigned int
+hash_func_finalize(unsigned int hv) {
 	hv += (hv << 3);
 	hv ^= (hv >> 11);
 	hv += (hv << 15);
-
 	return hv;
+}
+
+static unsigned int
+hash_func(const void *key, size_t length) {
+	register unsigned int hv = 0; /* could put a seed here instead of zero */
+    hv = hash_func_part(hv, key, length);
+    return hash_func_finalize(hv);
 }
 
 /* Call the hash function associated to the ht. In case it's NULL, it calls
@@ -984,4 +994,27 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
             return cmp;
     }
     return 0;
+}
+
+unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key)
+{
+    unsigned int hv = 0;
+    unsigned char* a = (unsigned char*)key;
+
+    int i;
+    for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
+        cfuhash_fieldspec_t *field = fields+i;
+        size_t offset = field->offset;
+        char* field_a = NULL;
+
+        switch(field->kind) {
+        case cfuhash_primitive:
+            hv = hash_func_part(hv, a+offset, field->size);
+            break;
+        default:
+            fprintf(stderr, "cfuhash_generic_hash: unknown field kind: %d\n", field->kind);
+            abort();
+        }
+    }
+    return hash_func_finalize(hv);
 }

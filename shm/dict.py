@@ -58,7 +58,7 @@ dictffi.cdef("""
     } cfuhash_fieldspec_t;
 
     int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
-
+    unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key);
 
     void free(void* ptr); /* stdlib's free */
 """)
