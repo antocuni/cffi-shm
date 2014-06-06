@@ -57,6 +57,7 @@ class StructDecorator(object):
         self.add_ctor(cls)
         if self.immutable:
             self.add_key(cls)
+            self.add_fieldspec(cls)
         #
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
@@ -108,6 +109,22 @@ class StructDecorator(object):
         cls.__hash__ = __hash__
         cls.__eq__ = __eq__
 
+    def add_fieldspec(self, cls):
+        from shm.dict import dictffi, lib
+        n = len(self.ctype.item.fields) + 1
+        fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
+        for i, (fieldname, field) in enumerate(self.ctype.item.fields):
+            f = fieldspec[i]
+            if field.type.kind == 'primitive':
+                f.kind = lib.cfuhash_primitive
+                f.offset = field.offset
+                f.size = self.ffi.sizeof(field.type)
+            else:
+                import pdb;pdb.set_trace()
+        #
+        fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
+        cls.__fieldspec__ = fieldspec
+        
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)
@@ -143,3 +160,4 @@ class StructDecorator(object):
         fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
+

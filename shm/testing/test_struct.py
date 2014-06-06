@@ -95,6 +95,36 @@ def test_equality_hash():
     assert p1 == p2
     assert p1 != None # check that the exception is not propagated outside __eq__
 
+def test_fieldspec():
+    from shm import gclib
+    from shm.dict import lib
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct {
+            long x;
+            long y;
+            char color;
+        } Point;
+        typedef struct {
+            const char* name;
+            Point *p;
+        } NamedPoint;
+    """)
+    pyffi = PyFFI(ffi)
+    Point = pyffi.struct('Point')
+    point_spec = Point.__fieldspec__
+    assert len(point_spec) == 4
+    assert point_spec[0].kind == lib.cfuhash_primitive
+    assert point_spec[0].offset == 0
+    assert point_spec[0].size == ffi.sizeof('long')
+    assert point_spec[1].kind == lib.cfuhash_primitive
+    assert point_spec[1].offset == ffi.offsetof('Point', 'y')
+    assert point_spec[1].size == ffi.sizeof('long')
+    assert point_spec[2].kind == lib.cfuhash_primitive
+    assert point_spec[2].offset == ffi.offsetof('Point', 'color')
+    assert point_spec[2].size == ffi.sizeof('char')
+    assert point_spec[3].kind == lib.cfuhash_fieldspec_stop
+
 
 def test_string():
     from shm import gclib
