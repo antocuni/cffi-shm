@@ -185,6 +185,12 @@ def test_libcfu_generic_cmp_pointer(ffi):
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) != 0
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
     #
+    h1 = lib.cfuhash_generic_hash(rect_spec, r1)
+    h2 = lib.cfuhash_generic_hash(rect_spec, r2)
+    h3 = lib.cfuhash_generic_hash(rect_spec, r3)
+    assert h1 != h2 != h3
+    #
+    #
     # fix rect_spec to compare a and b as pointers
     rect_spec[0].kind = lib.cfuhash_pointer
     rect_spec[0].fieldspec = point_spec
@@ -192,6 +198,13 @@ def test_libcfu_generic_cmp_pointer(ffi):
     rect_spec[1].fieldspec = point_spec
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
+    #
+    h1 = lib.cfuhash_generic_hash(rect_spec, r1)
+    h2 = lib.cfuhash_generic_hash(rect_spec, r2)
+    h3 = lib.cfuhash_generic_hash(rect_spec, r3)
+    assert h1 == h2
+    assert h1 != h3
+
 
 
 def test_DictType(pyffi):

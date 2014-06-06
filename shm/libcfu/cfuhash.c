@@ -996,9 +996,9 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
     return 0;
 }
 
-unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key)
+unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fields[], 
+                                       void* key)
 {
-    unsigned int hv = 0;
     unsigned char* a = (unsigned char*)key;
 
     int i;
@@ -1011,6 +1011,10 @@ unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key)
         case cfuhash_primitive:
             hv = hash_func_part(hv, a+offset, field->size);
             break;
+        case cfuhash_pointer:
+            field_a = *(char**)(a+offset);
+            hv = cfuhash_generic_hash_impl(hv, field->fieldspec, field_a);
+            break;
         case cfuhash_string:
             field_a = *(char**)(a+offset);
             hv = hash_func_part(hv, field_a, strlen(field_a));
@@ -1020,5 +1024,12 @@ unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key)
             abort();
         }
     }
+    return hv;
+}
+
+
+unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key) {
+    unsigned int hv = 0;
+    hv = cfuhash_generic_hash_impl(hv, fields, key);
     return hash_func_finalize(hv);
 }
