@@ -96,14 +96,6 @@ def test_equality_hash():
     assert p1 != None # check that the exception is not propagated outside __eq__
 
 
-def test_c_hash():
-    pyffi = PyFFI(ffi)
-    Point = pyffi.struct('Point')
-    p1 = Point(1, 2)
-    h = Point.__c_hash__(p1._ptr, 0)
-    # __c_hash__ returns a 32bit int, while hash() a 64bit
-    assert h == hash(p1) & 0xFFFFFFFF
-
 def test_string():
     from shm import gclib
     ffi = cffi.FFI()

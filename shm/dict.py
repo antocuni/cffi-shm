@@ -93,8 +93,7 @@ class DictType(AbstractGenericType):
             self.nocopy = True
             self.keysize = self.ffi.sizeof(keytype)
             pytype = pyffi.pytypeof(keytype)
-            self.c_hash = pytype.__c_hash__
-            self.c_cmp = pytype.__c_cmp__
+            # XXX: we should set the fieldspec here
         else: # primitive types
             # by setting keysize to 0, we compare the void* pointers directly,
             # not their content. Note that 'long' and 'double' keys will be
