@@ -54,10 +54,11 @@ class StructDecorator(object):
     def __call__(self, cls):
         cls.pyffi = self.pyffi
         cls.ctype = self.ctype
+        cls.__immutable__ = self.immutable
         self.add_ctor(cls)
         if self.immutable:
             self.add_key(cls)
-            self.add_fieldspec(cls)
+            cls.__fieldspec__ = self.make_fieldspec(cls)
         #
         for name, field in self.ctype.item.fields:
             self.add_property(cls, name, field)
@@ -109,14 +110,14 @@ class StructDecorator(object):
         cls.__hash__ = __hash__
         cls.__eq__ = __eq__
 
-    def add_fieldspec(self, cls):
+    def make_fieldspec(self, cls):
         from shm.dict import dictffi, lib
         n = len(self.ctype.item.fields) + 1
         fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
         for i, (fieldname, field) in enumerate(self.ctype.item.fields):
             f = fieldspec[i]
             f.offset = field.offset
-            if field.type.kind == 'primitive':
+            if field.type.kind in ('primitive', 'array'):
                 f.kind = lib.cfuhash_primitive
                 f.size = self.ffi.sizeof(field.type)
             elif cffi_is_string(self.ffi, field.type):
@@ -124,14 +125,15 @@ class StructDecorator(object):
                 f.size = 0
             elif cffi_is_struct_ptr(self.ffi, field.type):
                 pytype = self.pyffi.pytypeof(field.type)
+                if not pytype.__immutable__:
+                    return None
                 f.kind = lib.cfuhash_pointer
                 f.fieldspec = pytype.__fieldspec__
             else:
                 assert False, 'unknown field kind'
         #
         fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
-        cls.__fieldspec__ = fieldspec
-        
+        return fieldspec
 
     def add_property(self, cls, fieldname, field):
         getter = self.getter(cls, fieldname, field)

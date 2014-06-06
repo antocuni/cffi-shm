@@ -4,7 +4,8 @@ from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
                       cffi_is_char_array, compile_def, identity)
 
 class AbstractGenericType(object):
-    pass
+    __immutable__ = False
+
 
 
 class PyFFI(object):
