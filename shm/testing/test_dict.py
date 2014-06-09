@@ -103,6 +103,7 @@ def test_libcfu_generic_cmp_string(ffi):
         typedef struct {
             const char* name;
             const char* surname;
+            const char* empty;
         } Person;
     """)
     keepalive = []
@@ -115,10 +116,12 @@ def test_libcfu_generic_cmp_string(ffi):
         p = ffi.new('Person*')
         p.name = name
         p.surname = surname
+        p.empty = ffi.NULL
         return p
     #
     person_spec = make_fieldspec(ffi, 'Person', [('name', lib.cfuhash_string),
-                                                 ('surname', lib.cfuhash_string)])
+                                                 ('surname', lib.cfuhash_string),
+                                                 ('empty', lib.cfuhash_string)])
     p1 = Person('Hello', 'World')
     p2 = Person('Hello', 'World')
     p3 = Person('Hello', 'ZZZ')

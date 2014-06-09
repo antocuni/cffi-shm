@@ -442,6 +442,21 @@ hash_add_entry(cfuhash_table_t *ht, unsigned int hv, const void *key, size_t key
 	return he;
 }
 
+static size_t strlen_robust(const char *s) {
+    if (s)
+        return strlen(s);
+    else
+        return 0;
+}
+
+static int strcmp_robust(const char* a, const char* b) {
+    if (a && b)
+        return strcmp(a, b);
+    // either a or b is NULL. We want that NULL < "any string"
+    return (a < b) ? -1 : (a > b);
+}
+
+
 /*
  Returns one if the entry was found, zero otherwise.  If found, r is
  changed to point to the data in the entry.
@@ -994,7 +1009,7 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
         case cfuhash_string:
             field_a = *(char**)(a+offset);
             field_b = *(char**)(b+offset);
-            cmp = strcmp(field_a, field_b);
+            cmp = strcmp_robust(field_a, field_b);
             break;
         default:
             fprintf(stderr, "cfuhash_generic_cmp: unknown field kind: %d\n", field->kind);
@@ -1027,7 +1042,7 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
             break;
         case cfuhash_string:
             field_a = *(char**)(a+offset);
-            hv = hash_func_part(hv, field_a, strlen(field_a));
+            hv = hash_func_part(hv, field_a, strlen_robust(field_a));
             break;
         default:
             fprintf(stderr, "cfuhash_generic_hash: unknown field kind: %d\n", field->kind);
