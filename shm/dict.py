@@ -75,8 +75,6 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
-import pdb;pdb.set_trace()
-
 class DictType(AbstractGenericType):
     def __init__(self, pyffi, keytype, valuetype, default_factory=None):
         self.pyffi = pyffi
