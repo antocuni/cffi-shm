@@ -56,6 +56,7 @@ typedef enum {
 } cfuhash_fieldkind_t;
 
 typedef struct cfuhash_fieldspec {
+    const char* name;
     cfuhash_fieldkind_t kind;
     size_t offset;
     union {

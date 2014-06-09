@@ -113,9 +113,10 @@ class StructDecorator(object):
     def make_fieldspec(self, cls):
         from shm.dict import dictffi, lib
         n = len(self.ctype.item.fields) + 1
-        fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
+        fieldspec = sharedmem.new_array(dictffi, 'cfuhash_fieldspec_t', n)
         for i, (fieldname, field) in enumerate(self.ctype.item.fields):
             f = fieldspec[i]
+            f.name = sharedmem.new_string('%s.%s' % (self.ctype.item.cname, fieldname))
             f.offset = field.offset
             if field.type.kind in ('primitive', 'array'):
                 f.kind = lib.cfuhash_primitive

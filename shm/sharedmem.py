@@ -66,15 +66,26 @@ class RO_shm(object):
     get_GC_free = _not_implemented
     roots = property(_not_implemented)
 
+    # XXX: __roots is never shrinked, so we are leaking memory right now :-(
+    __roots = []
+    
     def new(self, ffi, t, root=True):
         ptr = ffi.new(t)
         if root:
-            ptr = ffi.gc(ptr, self.lib.free)
+            self.__roots.append(ptr)
         return ptr
 
-    def new_string(self, s):
-        return self.ffi.new('char[]', s)
+    def new_string(self, s, root=True):
+        ptr = self.ffi.new('char[]', s)
+        if root:
+            self.__roots.append(ptr)
+        return ptr
 
+    def new_array(self, ffi, t, n, root=True):
+        ptr = ffi.new(t+'[]', n)
+        if root:
+            self.__roots.append(ptr)
+        return ptr
 
 
 sharedmem = Uninitialized_shm()

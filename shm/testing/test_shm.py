@@ -25,7 +25,9 @@ def exec_child(tmpdir, fn, *args):
         f.write('\n')
         f.write(call)
     #
-    ret = os.system("%s %s" % (sys.executable, filename))
+    cmd = "%s %s" % (sys.executable, filename)
+    #cmd = "gdb --args %s" % cmd
+    ret = os.system(cmd)
     if ret != 0:
         raise ValueError("The child returned non-0 status")
     return True
@@ -106,6 +108,7 @@ def test_dict_complex_key(tmpdir):
         from shm.sharedmem import sharedmem
         from shm.pyffi import PyFFI
         #
+        sharedmem.open_readonly(path)
         ffi = cffi.FFI()
         pyffi = PyFFI(ffi)
         ffi.cdef("""
@@ -115,8 +118,7 @@ def test_dict_complex_key(tmpdir):
             } Person;
         """)
         Person = pyffi.struct('Person')
-        PersonDict = pyffi.dict('Person', 'long')
-        sharedmem.open_readonly(path)
+        PersonDict = pyffi.dict('Person*', 'long')
         d = PersonDict.from_pointer(dict_addr)
         assert d[Person('Hello', 'World')] == 1
         assert d[Person('Foo', 'Bar')] == 2
@@ -130,7 +132,7 @@ def test_dict_complex_key(tmpdir):
         } Person;
     """)
     Person = pyffi.struct('Person')
-    PersonDict = pyffi.dict('Person', 'long')
+    PersonDict = pyffi.dict('Person*', 'long')
     d = PersonDict()
     d[Person('Hello', 'World')] = 1
     d[Person('Foo', 'Bar')] = 2
