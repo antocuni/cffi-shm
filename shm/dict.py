@@ -88,14 +88,14 @@ class DictType(AbstractGenericType):
             self.keysize = self.ffi.cast('size_t', -1)
         elif cffi_is_struct_ptr(self.ffi, keytype):
             self.nocopy = True
-            self.keysize = self.ffi.cast('size_t', 0)
-        elif cffi_is_struct(self.ffi, keytype):
-            self.nocopy = True
             self.keysize = self.ffi.sizeof(keytype)
             pytype = pyffi.pytypeof(keytype)
             if pytype.__fieldspec__ is None:
                 raise TypeError, 'Non-immutable shm dict key: %s' % pytype
             self.key_fieldspec = pytype.__fieldspec__
+        elif cffi_is_struct(self.ffi, keytype):
+            self.nocopy = True
+            self.keysize = self.ffi.sizeof(keytype)
         else: # primitive types
             # by setting keysize to 0, we compare the void* pointers directly,
             # not their content. Note that 'long' and 'double' keys will be

@@ -299,6 +299,7 @@ def test_long_key(pyffi):
     assert d[20] == 40
 
 def test_key_struct_byval(pyffi):
+    # first: we use struct by value as keys, easy case
     ffi = pyffi.ffi
     ffi.cdef("""
         typedef struct {
@@ -316,7 +317,6 @@ def test_key_struct_byval(pyffi):
     antocuni2 = FullName('Antonio', 'Cuni')
     wrongname = FullName('Antonio', 'Foobar')
 
-    # first: we use struct by value as keys
     DT = DictType(pyffi, 'FullName', 'long')
     d = DT()
     d[antocuni] = 1
@@ -329,39 +329,10 @@ def test_key_struct_byval(pyffi):
     assert keys == [antocuni, wrongname]
 
 
-def test_key_struct_byptr(pyffi):
-    ffi = pyffi.ffi
-    ffi.cdef("""
-        typedef struct {
-            char first_name[20];
-            char last_name[20];
-        } FullName;
-    """)
-
-    class FullName(pyffi.struct('FullName')):
-        # this is needed for 'sorted' below
-        def __cmp__(self, other):
-            return cmp(self._key(), other._key())
-
-    antocuni = FullName('Antonio', 'Cuni')
-    antocuni2 = FullName('Antonio', 'Cuni')
-    wrongname = FullName('Antonio', 'Foobar')
-
-    # second: we use struct by pointer, i.e. antocuni and antocuni2 are
-    # different keys
-    DT = DictType(pyffi, 'FullName*', 'long')
-    d = DT()
-    d[antocuni] = 1
-    d[wrongname] = 2
-    assert d[antocuni] == 1
-    assert d.get(antocuni2) is None
-    assert d[wrongname] == 2
-    #
-    keys = sorted(d.keys())
-    assert keys == [antocuni, wrongname]
-
-
-def test_key_hash(pyffi):
+def test_key_struct_with_pointers(pyffi):
+    # second: we use struct by value as keys: the keys are compared shallowly,
+    # so if they contains two different pointers to the same string, they are
+    # considered unequal
     ffi = pyffi.ffi
     ffi.cdef("""
         typedef struct {
@@ -379,8 +350,23 @@ def test_key_hash(pyffi):
     antocuni2 = FullName('Antonio', 'Cuni')
     wrongname = FullName('Antonio', 'Foobar')
 
-    # third: we use struct by value, but we rely on the custom cmp function
     DT = DictType(pyffi, 'FullName', 'long')
+    d = DT()
+    d[antocuni] = 1
+    d[wrongname] = 2
+    assert d[antocuni] == 1
+    assert d.get(antocuni2) is None
+    assert d[wrongname] == 2
+    #
+    keys = sorted(d.keys())
+    assert keys == [antocuni, wrongname]
+    #
+    # ------------------------------------
+    #
+    # third: keys are pointers to a struct, and comparison is done using the
+    # "fieldspec", i.e. it's a deep comparison
+    #
+    DT = DictType(pyffi, 'FullName*', 'long')
     d = DT()
     d[antocuni] = 1
     d[wrongname] = 2
