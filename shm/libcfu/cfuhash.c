@@ -91,6 +91,7 @@ struct cfuhash_table {
 	cfuhash_entry *each_chain_entry;
 	float high;
 	float low;
+    cfuhash_fieldspec_t *key_fieldspec;
 	cfuhash_malloc_fn_t malloc_fn;
 	cfuhash_free_fn_t free_fn;
 	cfuhash_free_fn_t values_free_fn; /* this is optional */
@@ -132,7 +133,9 @@ hash_func(const void *key, size_t length) {
    different address spaces.
 */
 static unsigned int call_hash_func(cfuhash_table_t *ht, const void *key, size_t length) {
-	if (ht->hash_func == NULL)
+    if (ht->key_fieldspec != NULL)
+        return cfuhash_generic_hash(ht->key_fieldspec, key);
+	else if (ht->hash_func == NULL)
 		return hash_func(key, length);
 	else
 		return ht->hash_func(key, length);
@@ -334,6 +337,10 @@ cfuhash_set_thresholds(cfuhash_table_t *ht, float low, float high) {
 	return 0;
 }
 
+int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]) {
+    ht->key_fieldspec = fs;
+}
+
 /* Sets the hash function for the hash table ht.  Pass NULL for hf to reset to the default */
 int
 cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf) {
@@ -402,6 +409,9 @@ hash_cmp(cfuhash_table_t *ht, const void *key, size_t key_size,
 	if (key_size != he->key_size) return 1;
 	if (key == he->key) return 0;
 	if (key_size == 0) return 1; /* compare by pointer, not by value */
+    if (ht->key_fieldspec) {
+        return cfuhash_generic_cmp(ht->key_fieldspec, key, he->key);
+    }
 	if (ht->cmp_func) {
 		return ht->cmp_func(key, key_size, he->key, he->key_size);
 	}
@@ -977,8 +987,8 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
             cmp = memcmp(a+offset, b+offset, field->size);
             break;
         case cfuhash_pointer:
-            field_a = *(char**)(a+offset);
-            field_b = *(char**)(b+offset);
+            field_a = *(void**)(a+offset);
+            field_b = *(void**)(b+offset);
             cmp = cfuhash_generic_cmp(field->fieldspec, field_a, field_b);
             break;
         case cfuhash_string:
@@ -1033,3 +1043,4 @@ unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key) {
     hv = cfuhash_generic_hash_impl(hv, fields, key);
     return hash_func_finalize(hv);
 }
+

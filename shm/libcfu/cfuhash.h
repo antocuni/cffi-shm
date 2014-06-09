@@ -47,6 +47,24 @@ CFU_BEGIN_DECLS
 /* The hash table itself. */
 typedef struct cfuhash_table cfuhash_table_t;
 
+/* The fieldspec struct */
+typedef enum { 
+    cfuhash_fieldspec_stop=0,
+    cfuhash_primitive,
+    cfuhash_pointer, 
+    cfuhash_string
+} cfuhash_fieldkind_t;
+
+typedef struct cfuhash_fieldspec {
+    cfuhash_fieldkind_t kind;
+    size_t offset;
+    union {
+        size_t size;
+        struct cfuhash_fieldspec *fieldspec;
+    };
+} cfuhash_fieldspec_t;
+
+
 /* Prototype for a pointer to a hashing function. */
 typedef unsigned int (*cfuhash_function_t)(const void *key, size_t length);
 
@@ -101,6 +119,11 @@ int cfuhash_copy(cfuhash_table_t *src, cfuhash_table_t *dst);
 */
 cfuhash_table_t * cfuhash_merge(cfuhash_table_t *ht1, cfuhash_table_t *ht2,
 	unsigned int flags);
+
+/* Set the "fieldspec" for the key type, which will be used to compute the
+ * hash and comparision functions
+ */
+int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]);
 
 /* Sets the hashing function to use when computing which bucket to add
  * entries to.  It should return a 32-bit unsigned integer.  By
@@ -279,22 +302,6 @@ void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
 
 /* generic hash and cmp functions */
-typedef enum { 
-    cfuhash_fieldspec_stop=0,
-    cfuhash_primitive,
-    cfuhash_pointer, 
-    cfuhash_string
-} cfuhash_fieldkind_t;
-
-typedef struct cfuhash_fieldspec {
-    cfuhash_fieldkind_t kind;
-    size_t offset;
-    union {
-        size_t size;
-        struct cfuhash_fieldspec *fieldspec;
-    };
-} cfuhash_fieldspec_t;
-
 int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
 unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key);
 

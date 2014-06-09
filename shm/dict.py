@@ -57,6 +57,7 @@ dictffi.cdef("""
         };
     } cfuhash_fieldspec_t;
 
+    int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]);
     int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
     unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key);
 
@@ -74,13 +75,14 @@ lib = dictffi.verify(
 )
 old_cwd.chdir()
 
+import pdb;pdb.set_trace()
+
 class DictType(AbstractGenericType):
     def __init__(self, pyffi, keytype, valuetype, default_factory=None):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.nocopy = False # by default, keys are copied
-        self.c_hash = None
-        self.c_cmp = None
+        self.key_fieldspec = None
         self.keytype = keytype
         self.valuetype = valuetype
         self.default_factory = default_factory
@@ -93,7 +95,9 @@ class DictType(AbstractGenericType):
             self.nocopy = True
             self.keysize = self.ffi.sizeof(keytype)
             pytype = pyffi.pytypeof(keytype)
-            # XXX: we should set the fieldspec here
+            if pytype.__fieldspec__ is None:
+                raise TypeError, 'Non-immutable shm dict key: %s' % pytype
+            self.key_fieldspec = pytype.__fieldspec__
         else: # primitive types
             # by setting keysize to 0, we compare the void* pointers directly,
             # not their content. Note that 'long' and 'double' keys will be
@@ -113,11 +117,8 @@ class DictType(AbstractGenericType):
                                                  sharedmem.get_GC_free())
         if self.nocopy:
             lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
-        if self.c_hash:
-            c_hash = dictffi.cast('cfuhash_function_t', self.c_hash)
-            c_cmp = dictffi.cast('cfuhash_cmp_t', self.c_cmp)
-            lib.cfuhash_set_hash_function(ptr, c_hash)
-            lib.cfuhash_set_cmp_function(ptr, c_cmp)
+        if self.key_fieldspec:
+            lib.cfuhash_set_key_fieldspec(ptr, self.key_fieldspec)
         #
         if root:
             ptr = sharedmem.roots.add(dictffi, ptr)
