@@ -155,6 +155,7 @@ def test_libcfu_generic_cmp_pointer(ffi):
         typedef struct  {
             Point *a;
             Point *b;
+            Point *c;
         } Rectangle;
     """)
     keepalive = []
@@ -168,13 +169,15 @@ def test_libcfu_generic_cmp_pointer(ffi):
         r = ffi.new('Rectangle*')
         r.a = a
         r.b = b
+        r.c = ffi.NULL
         keepalive.append(r)
         return r
     #
     point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
                                                ('y', lib.cfuhash_primitive)])
     rect_spec = make_fieldspec(ffi, 'Rectangle', [('a', lib.cfuhash_primitive),
-                                                  ('b', lib.cfuhash_primitive)])
+                                                  ('b', lib.cfuhash_primitive),
+                                                  ('c', lib.cfuhash_primitive)])
     p1 = Point(1, 2)
     p2 = Point(1, 2)
     p3 = Point(3, 4)
@@ -199,6 +202,8 @@ def test_libcfu_generic_cmp_pointer(ffi):
     rect_spec[0].fieldspec = point_spec
     rect_spec[1].kind = lib.cfuhash_pointer
     rect_spec[1].fieldspec = point_spec
+    rect_spec[2].kind = lib.cfuhash_pointer
+    rect_spec[2].fieldspec = point_spec
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
     assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
     #

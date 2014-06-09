@@ -104,6 +104,8 @@ static unsigned int
 hash_func_part(unsigned int hv, const void *key, size_t length) {
 	register size_t i = length;
 	register const unsigned char *s = (const unsigned char *)key;
+    if (!key)
+        return hv;
 	while (i--) {
 		hv += *s++;
 		hv += (hv << 10);
@@ -442,6 +444,11 @@ hash_add_entry(cfuhash_table_t *ht, unsigned int hv, const void *key, size_t key
 	return he;
 }
 
+
+static int cmp(const void* a, const void* b) {
+    return (a < b) ? -1 : (a > b);
+}
+
 static size_t strlen_robust(const char *s) {
     if (s)
         return strlen(s);
@@ -452,8 +459,13 @@ static size_t strlen_robust(const char *s) {
 static int strcmp_robust(const char* a, const char* b) {
     if (a && b)
         return strcmp(a, b);
-    // either a or b is NULL. We want that NULL < "any string"
-    return (a < b) ? -1 : (a > b);
+    return cmp(a, b);
+}
+
+static int memcmp_robust(void* a, void* b, size_t length) {
+    if (a && b)
+        return memcmp(a, b, length);
+    return cmp(a, b);
 }
 
 
@@ -986,6 +998,9 @@ cfuhash_num_buckets_used(cfuhash_table_t *ht) {
 
 int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 {
+    if (!(key1 && key2))
+        return cmp(key1, key2);
+
     unsigned char* a = (unsigned char*)key1;
     unsigned char* b = (unsigned char*)key2;
 
@@ -999,7 +1014,7 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 
         switch(field->kind) {
         case cfuhash_primitive:
-            cmp = memcmp(a+offset, b+offset, field->size);
+            cmp = memcmp_robust(a+offset, b+offset, field->size);
             break;
         case cfuhash_pointer:
             field_a = *(void**)(a+offset);
@@ -1024,6 +1039,9 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fields[], 
                                        void* key)
 {
+    if (!key)
+        return hv;
+
     unsigned char* a = (unsigned char*)key;
 
     int i;

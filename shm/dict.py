@@ -72,7 +72,7 @@ lib = dictffi.verify(
     """,
     sources = ['shm/libcfu/cfuhash.c'],
     include_dirs = ['shm/libcfu'],
-    #extra_compile_args = ['-g', '-O1'],
+    #extra_compile_args = ['-g', '-O0'],
 )
 old_cwd.chdir()
 
