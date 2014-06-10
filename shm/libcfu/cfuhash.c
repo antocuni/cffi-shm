@@ -463,7 +463,7 @@ static int strcmp_robust(const char* a, const char* b) {
     return cmp(a, b);
 }
 
-static int memcmp_robust(void* a, void* b, size_t length) {
+static int memcmp_robust(const void* a, const void* b, size_t length) {
     if (a && b)
         return memcmp(a, b, length);
     return cmp(a, b);
@@ -997,13 +997,10 @@ cfuhash_num_buckets_used(cfuhash_table_t *ht) {
 	return count;
 }
 
-int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* key1, const void* key2)
+int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* a, const void* b)
 {
-    if (!(key1 && key2))
-        return cmp(key1, key2);
-
-    unsigned char* a = (unsigned char*)key1;
-    unsigned char* b = (unsigned char*)key2;
+    if (!(a && b))
+        return cmp(a, b);
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
@@ -1032,8 +1029,8 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* key1, const vo
             }
             break;
         case cfuhash_string:
-            field_a = *(char**)(a+offset);
-            field_b = *(char**)(b+offset);
+            field_a = *(void**)(a+offset);
+            field_b = *(void**)(b+offset);
             cmp = strcmp_robust(field_a, field_b);
             break;
         default:
@@ -1047,12 +1044,10 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* key1, const vo
 }
 
 unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fields[], 
-                                       const void* key)
+                                       const void* a)
 {
-    if (!key)
+    if (!a)
         return hv;
-
-    unsigned char* a = (unsigned char*)key;
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
@@ -1067,14 +1062,14 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
             hv = hash_func_part(hv, a+offset, field->size);
             break;
         case cfuhash_pointer:
-            field_a = *(char**)(a+offset);
+            field_a = *(void**)(a+offset);
             for(j=0; j<field->length; j++) {
                 item_a = field_a + (j*field->size);
                 hv = cfuhash_generic_hash_impl(hv, field->fieldspec, item_a);
             }
             break;
         case cfuhash_string:
-            field_a = *(char**)(a+offset);
+            field_a = *(void**)(a+offset);
             hv = hash_func_part(hv, field_a, strlen_robust(field_a));
             break;
         default:
