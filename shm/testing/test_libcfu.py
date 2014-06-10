@@ -52,7 +52,16 @@ def make_fieldspec(ffi, t, spec):
             fieldspec[i].size = ffi.sizeof(fields[fieldname].type)
     fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
     return fieldspec
-    
+
+def generic_cmp(fieldspec, p1, p2):
+    res = lib.cfuhash_generic_cmp(fieldspec, p1, p2)
+    h1 = lib.cfuhash_generic_hash(fieldspec, p1)
+    h2 = lib.cfuhash_generic_hash(fieldspec, p2)
+    if res == 0:
+        assert h1 == h2
+    else:
+        assert h1 != h2
+    return res
 
 def test_libcfu_generic_cmp_primitive(ffi):
     ffi.cdef("""
@@ -75,25 +84,14 @@ def test_libcfu_generic_cmp_primitive(ffi):
     p1 = Point(1, 2, 3)
     p2 = Point(1, 2, 3)
     p3 = Point(1, 2, 300)
-    assert lib.cfuhash_generic_cmp(point_spec, p1, p2) == 0
-    assert lib.cfuhash_generic_cmp(point_spec, p1, p3) < 0
-    assert lib.cfuhash_generic_cmp(point_spec, p3, p1) > 0
-    #
-    h1 = lib.cfuhash_generic_hash(point_spec, p1)
-    h2 = lib.cfuhash_generic_hash(point_spec, p2)
-    h3 = lib.cfuhash_generic_hash(point_spec, p3)
-    assert h1 == h2
-    assert h1 != h3
-    #
+    assert generic_cmp(point_spec, p1, p2) == 0
+    assert generic_cmp(point_spec, p1, p3) < 0
+    assert generic_cmp(point_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore z, so that p1 and p3 are equal
     point_spec[2].kind = lib.cfuhash_fieldspec_stop
-    assert lib.cfuhash_generic_cmp(point_spec, p1, p3) == 0
-    #
-    h1 = lib.cfuhash_generic_hash(point_spec, p1)
-    h2 = lib.cfuhash_generic_hash(point_spec, p2)
-    h3 = lib.cfuhash_generic_hash(point_spec, p3)
-    assert h1 == h2 == h3
+    assert generic_cmp(point_spec, p1, p2) == 0
+    assert generic_cmp(point_spec, p1, p3) == 0
 
 
 def test_libcfu_generic_cmp_string(ffi):
@@ -123,25 +121,14 @@ def test_libcfu_generic_cmp_string(ffi):
     p1 = Person('Hello', 'World')
     p2 = Person('Hello', 'World')
     p3 = Person('Hello', 'ZZZ')
-    assert lib.cfuhash_generic_cmp(person_spec, p1, p2) == 0
-    assert lib.cfuhash_generic_cmp(person_spec, p1, p3) < 0
-    assert lib.cfuhash_generic_cmp(person_spec, p3, p1) > 0
-    #
-    h1 = lib.cfuhash_generic_hash(person_spec, p1)
-    h2 = lib.cfuhash_generic_hash(person_spec, p2)
-    h3 = lib.cfuhash_generic_hash(person_spec, p3)
-    assert h1 == h2
-    assert h1 != h3
-    #
+    assert generic_cmp(person_spec, p1, p2) == 0
+    assert generic_cmp(person_spec, p1, p3) < 0
+    assert generic_cmp(person_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
     person_spec[1].kind = lib.cfuhash_fieldspec_stop
-    assert lib.cfuhash_generic_cmp(person_spec, p1, p3) == 0
-    #
-    h1 = lib.cfuhash_generic_hash(person_spec, p1)
-    h2 = lib.cfuhash_generic_hash(person_spec, p2)
-    h3 = lib.cfuhash_generic_hash(person_spec, p3)
-    assert h1 == h2 == h3
+    assert generic_cmp(person_spec, p1, p2) == 0
+    assert generic_cmp(person_spec, p1, p3) == 0
 
 def test_libcfu_generic_cmp_pointer(ffi):
     ffi.cdef("""
@@ -186,28 +173,17 @@ def test_libcfu_generic_cmp_pointer(ffi):
     #
     # Rectangle.{a,b} are compared as primitive fields, so r1 and r2 are
     # different
-    assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) != 0
-    assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
-    #
-    h1 = lib.cfuhash_generic_hash(rect_spec, r1)
-    h2 = lib.cfuhash_generic_hash(rect_spec, r2)
-    h3 = lib.cfuhash_generic_hash(rect_spec, r3)
-    assert h1 != h2 != h3
-    #
+    assert generic_cmp(rect_spec, r1, r2) != 0
+    assert generic_cmp(rect_spec, r1, r3) != 0
+    assert generic_cmp(rect_spec, r2, r3) != 0
     #
     # fix rect_spec to compare a and b as pointers
     for i in range(3):
         rect_spec[i].kind = lib.cfuhash_pointer
         rect_spec[i].fieldspec = point_spec
         rect_spec[i].length = 1
-    assert lib.cfuhash_generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
-    assert lib.cfuhash_generic_cmp(rect_spec, r1, r3) != 0
-    #
-    h1 = lib.cfuhash_generic_hash(rect_spec, r1)
-    h2 = lib.cfuhash_generic_hash(rect_spec, r2)
-    h3 = lib.cfuhash_generic_hash(rect_spec, r3)
-    assert h1 == h2
-    assert h1 != h3
+    assert generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
+    assert generic_cmp(rect_spec, r1, r3) != 0
 
 def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
     ffi.cdef("""
@@ -239,25 +215,16 @@ def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
     pl2.points[0] = (1, 2)
     pl2.points[1] = (3, 4)
     
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 == h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) == 0
     #
     # now we make them different
     p2[1].y = 400
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) != 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 != h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) != 0
     #
     # now we change the spec to consider only the first item, so they are
     # "equal" again
     pointlist_spec[0].length = 1
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 == h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) == 0
 
 
 def test_libcfu_generic_cmp_array(ffi):
@@ -294,30 +261,18 @@ def test_libcfu_generic_cmp_array(ffi):
     pl2.points[0] = (1, 2)
     pl2.points[1] = (3, 4)
     
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 == h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) == 0
     #
     # now we make them different
     p2[1].y = 400
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) != 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 != h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) != 0
     #
     # now we tell it to consider only the first item, so they are equal again
     pl1.n = 1
     pl2.n = 1
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 == h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) == 0
     #
     # finally, we check that if we have different lenghts, they are considered different
     pl2.n = 2
-    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) != 0
-    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
-    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
-    assert h1 != h2
+    assert generic_cmp(pointlist_spec, pl1, pl2) != 0
 
