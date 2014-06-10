@@ -130,6 +130,7 @@ class StructDecorator(object):
                     return None
                 f.kind = lib.cfuhash_pointer
                 f.fieldspec = pytype.__fieldspec__
+                f.length = 1
             else:
                 assert False, 'unknown field kind'
         #

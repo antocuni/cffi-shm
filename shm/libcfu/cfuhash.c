@@ -341,6 +341,7 @@ cfuhash_set_thresholds(cfuhash_table_t *ht, float low, float high) {
 
 int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]) {
     ht->key_fieldspec = fs;
+    return 0;
 }
 
 /* Sets the hash function for the hash table ht.  Pass NULL for hf to reset to the default */
@@ -996,7 +997,7 @@ cfuhash_num_buckets_used(cfuhash_table_t *ht) {
 	return count;
 }
 
-int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
+int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* key1, const void* key2)
 {
     if (!(key1 && key2))
         return cmp(key1, key2);
@@ -1006,10 +1007,13 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
+        int j;
         cfuhash_fieldspec_t *field = fields+i;
         size_t offset = field->offset;
-        char* field_a = NULL;
-        char* field_b = NULL;
+        void* field_a = NULL;
+        void* field_b = NULL;
+        void* item_a = NULL;
+        void* item_b = NULL;
         int cmp;
 
         switch(field->kind) {
@@ -1019,7 +1023,13 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
         case cfuhash_pointer:
             field_a = *(void**)(a+offset);
             field_b = *(void**)(b+offset);
-            cmp = cfuhash_generic_cmp(field->fieldspec, field_a, field_b);
+            for(j=0; j<field->length; j++) {
+                item_a = field_a + (j*field->size);
+                item_b = field_b + (j*field->size);
+                cmp = cfuhash_generic_cmp(field->fieldspec, item_a, item_b);
+                if (cmp != 0)
+                    return cmp;
+            }
             break;
         case cfuhash_string:
             field_a = *(char**)(a+offset);
@@ -1037,7 +1047,7 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2)
 }
 
 unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fields[], 
-                                       void* key)
+                                       const void* key)
 {
     if (!key)
         return hv;
@@ -1046,9 +1056,11 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
+        int j;
         cfuhash_fieldspec_t *field = fields+i;
         size_t offset = field->offset;
-        char* field_a = NULL;
+        void* field_a = NULL;
+        void* item_a = NULL;
 
         switch(field->kind) {
         case cfuhash_primitive:
@@ -1056,7 +1068,10 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
             break;
         case cfuhash_pointer:
             field_a = *(char**)(a+offset);
-            hv = cfuhash_generic_hash_impl(hv, field->fieldspec, field_a);
+            for(j=0; j<field->length; j++) {
+                item_a = field_a + (j*field->size);
+                hv = cfuhash_generic_hash_impl(hv, field->fieldspec, item_a);
+            }
             break;
         case cfuhash_string:
             field_a = *(char**)(a+offset);
@@ -1071,7 +1086,7 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
 }
 
 
-unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key) {
+unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], const void* key) {
     unsigned int hv = 0;
     hv = cfuhash_generic_hash_impl(hv, fields, key);
     return hash_func_finalize(hv);

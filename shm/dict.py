@@ -52,10 +52,11 @@ dictffi.cdef("""
         const char* name;
         cfuhash_fieldkind_t kind;
         size_t offset;
-        union {
-            size_t size;
-            struct cfuhash_fieldspec *fieldspec;
-        };
+        struct cfuhash_fieldspec *fieldspec;
+        size_t size;   /* for cfuhash_primitive: size in bytes of the field
+                        * for cfuhash_pointer:   size in bytes of each item in the array
+                        */
+        size_t length; /* for cfuhash_pointer: number of items in the array */
     } cfuhash_fieldspec_t;
 
     int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]);
