@@ -313,6 +313,8 @@ unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], const void* key)
 
 #define CMP(a, b) ((a < b) ? -1 : (a > b))
 
+#define FIELD(type, ptr, offset) (*(type*)(ptr+offset))
+
 CFU_END_DECLS
 
 #endif
