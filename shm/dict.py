@@ -2,84 +2,9 @@ import py
 import cffi
 from shm.sharedmem import sharedmem
 from shm.pyffi import AbstractGenericType
+from shm.libcfu import cfuffi, lib
 from shm.util import cffi_is_string, cffi_is_struct_ptr, cffi_is_struct
 
-ROOTDIR = py.path.local(__file__).dirpath('..')
-GCDIR = ROOTDIR.join('GC')
-old_cwd = ROOTDIR.chdir()
-
-dictffi = cffi.FFI()
-dictffi.cdef("""
-    static const int CFUHASH_NOCOPY_KEYS;
-    static const int CFUHASH_NO_LOCKING;
-
-    typedef ... cfuhash_table_t;
-    typedef unsigned int (*cfuhash_function_t)(const void *key, size_t length);
-    typedef int (*cfuhash_cmp_t)(const void *key1, size_t length1,
-                                 const void *key2, size_t length2);
-    typedef void* (*cfuhash_malloc_fn_t)(size_t size);
-    typedef void (*cfuhash_free_fn_t)(void *data);
-
-    cfuhash_table_t * cfuhash_new(void);
-    cfuhash_table_t * cfuhash_new_with_malloc_fn(cfuhash_malloc_fn_t malloc_fn,
-                                                 cfuhash_free_fn_t free_fn);
-    int cfuhash_destroy(cfuhash_table_t *ht);
-
-    void * cfuhash_get(cfuhash_table_t *ht, const char *key); /* used only in tests */
-    int cfuhash_get_data(cfuhash_table_t *ht, const void *key, size_t key_size,
-                         void **data, size_t *data_size);
-    int cfuhash_put_data(cfuhash_table_t *ht, const void *key, size_t key_size, void *data,
-	                 size_t data_size, void **r);
-    int cfuhash_exists_data(cfuhash_table_t *ht, const void *key, size_t key_size);
-    void * cfuhash_delete_data(cfuhash_table_t *ht, const void *key, size_t key_size);
-    void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
-
-    int cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf);
-    int cfuhash_set_cmp_function(cfuhash_table_t *ht, cfuhash_cmp_t cmpf);
-
-    unsigned int cfuhash_get_flags(cfuhash_table_t *ht);
-    unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
-    unsigned int cfuhash_clear_flag(cfuhash_table_t *ht, unsigned int new_flag);
-
-    typedef enum { 
-        cfuhash_fieldspec_stop=0,
-        cfuhash_primitive,
-        cfuhash_pointer,
-        cfuhash_array,
-        cfuhash_string
-    } cfuhash_fieldkind_t;
-
-    typedef struct cfuhash_fieldspec {
-        const char* name;
-        cfuhash_fieldkind_t kind;
-        size_t offset;
-        struct cfuhash_fieldspec *fieldspec;
-        size_t size;   /* cfuhash_primitive:       size in bytes of the field
-                        * cfuhash_{pointer,array}: size in bytes of each item in the array
-                        */
-        union {
-            size_t length;        /* cfuhash_pointer: number of items in the array */
-            size_t length_offset; /* cfuhash_array: offset where to find the length field */
-        };
-    } cfuhash_fieldspec_t;
-
-    int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]);
-    int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], void* key1, void* key2);
-    unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], void* key);
-
-    void free(void* ptr); /* stdlib's free */
-""")
-
-lib = dictffi.verify(
-    """
-    #include <stdlib.h>
-    #include "cfuhash.h"
-    """,
-    sources = ['shm/libcfu/cfuhash.c'],
-    include_dirs = ['shm/libcfu'],
-    #extra_compile_args = ['-g', '-O0'],
-)
-old_cwd.chdir()
 
 class DictType(AbstractGenericType):
     def __init__(self, pyffi, keytype, valuetype, default_factory=None):
@@ -125,7 +50,7 @@ class DictType(AbstractGenericType):
             lib.cfuhash_set_key_fieldspec(ptr, self.key_fieldspec)
         #
         if root:
-            ptr = sharedmem.roots.add(dictffi, ptr)
+            ptr = sharedmem.roots.add(cfuffi, ptr)
         # NOTE: it is very important that we call _from_ht and not
         # from_pointer, because the latter does a cast, which means that the
         # original cdata to which we attached the root is destroied, and thus
@@ -136,7 +61,7 @@ class DictType(AbstractGenericType):
         return d
 
     def from_pointer(self, ptr):
-        ht = dictffi.cast('cfuhash_table_t*', ptr)
+        ht = cfuffi.cast('cfuhash_table_t*', ptr)
         return self._from_ht(ht)
 
     def _from_ht(self, ht):
@@ -154,10 +79,10 @@ class DictInstance(object):
     def __init__(self, dictype, ht):
         self.dictype = dictype
         self.ht = ht
-        self.retbuffer = dictffi.new('void*[1]') # passed to cfuhash_get_data
+        self.retbuffer = cfuffi.new('void*[1]') # passed to cfuhash_get_data
 
     def __repr__(self):
-        addr = int(dictffi.cast('long', self.ht))
+        addr = int(cfuffi.cast('long', self.ht))
         return '<shm dict [%s: %s] at 0x%x>' % (self.dictype.keytype,
                                                 self.dictype.valuetype,
                                                 addr)
@@ -172,7 +97,7 @@ class DictInstance(object):
         t = self.dictype
         key = self._key(ckey)
         ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
-                                   self.retbuffer, dictffi.NULL)
+                                   self.retbuffer, cfuffi.NULL)
         if ret == 0:
             return self.__missing__(ckey)
         value = self.retbuffer[0]
@@ -187,7 +112,7 @@ class DictInstance(object):
         key = self._key(key)
         value = t.valueconverter.from_python(value)
         value = t.ffi.cast('void*', value)
-        lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, dictffi.NULL)
+        lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, cfuffi.NULL)
 
     def __contains__(self, key):
         t = self.dictype
@@ -217,9 +142,9 @@ class DictInstance(object):
 
     def keys(self):
         t = self.dictype
-        sizeptr = dictffi.new('size_t[1]')
+        sizeptr = cfuffi.new('size_t[1]')
         keys_array = lib.cfuhash_keys(self.ht, sizeptr, True)
-        if keys_array == dictffi.NULL:
+        if keys_array == cfuffi.NULL:
             raise MemoryError
         try:
             size = sizeptr[0]

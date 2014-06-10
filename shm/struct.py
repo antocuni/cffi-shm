@@ -111,9 +111,9 @@ class StructDecorator(object):
         cls.__eq__ = __eq__
 
     def make_fieldspec(self, cls):
-        from shm.dict import dictffi, lib
+        from shm.libcfu import cfuffi, lib
         n = len(self.ctype.item.fields) + 1
-        fieldspec = sharedmem.new_array(dictffi, 'cfuhash_fieldspec_t', n)
+        fieldspec = sharedmem.new_array(cfuffi, 'cfuhash_fieldspec_t', n)
         for i, (fieldname, field) in enumerate(self.ctype.item.fields):
             f = fieldspec[i]
             f.name = sharedmem.new_string('%s.%s' % (self.ctype.item.cname, fieldname))

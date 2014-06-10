@@ -1,7 +1,7 @@
 import pytest
 import cffi
 from shm.sharedmem import sharedmem
-from shm.dict import dictffi, lib
+from shm.libcfu import cfuffi, lib
 sharedmem.init('/cffi-shm-testing')
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_libcfu_gc(ffi):
 def make_fieldspec(ffi, t, spec):
     n = len(spec)+1
     fields = dict(ffi.typeof(t).fields)
-    fieldspec = dictffi.new('cfuhash_fieldspec_t[]', n)
+    fieldspec = cfuffi.new('cfuhash_fieldspec_t[]', n)
     for i, (fieldname, kind) in enumerate(spec):
         fieldspec[i].kind = kind
         fieldspec[i].offset = ffi.offsetof(t, fieldname)
