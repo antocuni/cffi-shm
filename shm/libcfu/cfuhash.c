@@ -445,11 +445,6 @@ hash_add_entry(cfuhash_table_t *ht, unsigned int hv, const void *key, size_t key
 	return he;
 }
 
-
-static int cmp(const void* a, const void* b) {
-    return (a < b) ? -1 : (a > b);
-}
-
 static size_t strlen_robust(const char *s) {
     if (s)
         return strlen(s);
@@ -460,13 +455,13 @@ static size_t strlen_robust(const char *s) {
 static int strcmp_robust(const char* a, const char* b) {
     if (a && b)
         return strcmp(a, b);
-    return cmp(a, b);
+    return CMP(a, b);
 }
 
 static int memcmp_robust(const void* a, const void* b, size_t length) {
     if (a && b)
         return memcmp(a, b, length);
-    return cmp(a, b);
+    return CMP(a, b);
 }
 
 
@@ -1000,7 +995,7 @@ cfuhash_num_buckets_used(cfuhash_table_t *ht) {
 int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* a, const void* b)
 {
     if (!(a && b))
-        return cmp(a, b);
+        return CMP(a, b);
 
     int i;
     for(i=0; fields[i].kind != cfuhash_fieldspec_stop; i++) {
@@ -1011,6 +1006,8 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* a, const void*
         void* field_b = NULL;
         void* item_a = NULL;
         void* item_b = NULL;
+        size_t array_length_a = 0;
+        size_t array_length_b = 0;
         int cmp;
 
         switch(field->kind) {
@@ -1018,9 +1015,26 @@ int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* a, const void*
             cmp = memcmp_robust(a+offset, b+offset, field->size);
             break;
         case cfuhash_pointer:
+        case cfuhash_array:
+            if (field->kind == cfuhash_pointer) {
+                // if it's a pointer, the lenght is in the fieldspec
+                array_length_a = field->length;
+                array_length_b = field->length;
+            }
+            else {
+                // if it's an array, the lenght is a field of the object,
+                // placed at lenght_offset
+                array_length_a = *(size_t*)(a+field->length_offset);
+                array_length_b = *(size_t*)(b+field->length_offset);
+                if (array_length_a != array_length_b) {
+                    // if the two objects have different lenghts, they are different
+                    cmp = CMP(array_length_a, array_length_b);
+                    break;
+                }
+            }
             field_a = *(void**)(a+offset);
             field_b = *(void**)(b+offset);
-            for(j=0; j<field->length; j++) {
+            for(j=0; j<array_length_a; j++) {
                 item_a = field_a + (j*field->size);
                 item_b = field_b + (j*field->size);
                 cmp = cfuhash_generic_cmp(field->fieldspec, item_a, item_b);
@@ -1054,6 +1068,7 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
         int j;
         cfuhash_fieldspec_t *field = fields+i;
         size_t offset = field->offset;
+        size_t array_length;
         void* field_a = NULL;
         void* item_a = NULL;
 
@@ -1062,8 +1077,15 @@ unsigned int cfuhash_generic_hash_impl(unsigned int hv, cfuhash_fieldspec_t fiel
             hv = hash_func_part(hv, a+offset, field->size);
             break;
         case cfuhash_pointer:
+        case cfuhash_array:
+            if (field->kind == cfuhash_pointer) {
+                array_length = field->length;
+            }
+            else {
+                array_length = *(size_t*)(a+field->length_offset);
+            }
             field_a = *(void**)(a+offset);
-            for(j=0; j<field->length; j++) {
+            for(j=0; j<array_length; j++) {
                 item_a = field_a + (j*field->size);
                 hv = cfuhash_generic_hash_impl(hv, field->fieldspec, item_a);
             }

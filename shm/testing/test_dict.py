@@ -214,7 +214,7 @@ def test_libcfu_generic_cmp_pointer(ffi):
     assert h1 == h2
     assert h1 != h3
 
-def test_libcfu_generic_cmp_array(ffi):
+def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
     ffi.cdef("""
         typedef struct {
             long x;
@@ -263,7 +263,69 @@ def test_libcfu_generic_cmp_array(ffi):
     h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
     h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
     assert h1 == h2
+
+
+def test_libcfu_generic_cmp_array(ffi):
+    ffi.cdef("""
+        typedef struct {
+            long x;
+            long y;
+        } Point;
+        typedef struct {
+            long n;
+            Point* points;
+        } PointList;
+    """)
+    #
+    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
+                                               ('y', lib.cfuhash_primitive)])
+    pointlist_spec = make_fieldspec(ffi, 'PointList',
+                                    [('n', lib.cfuhash_primitive),
+                                     ('points', lib.cfuhash_array)])
+    #
+    pointlist_spec[1].fieldspec = point_spec
+    pointlist_spec[1].size = ffi.sizeof('Point')
+    pointlist_spec[1].length_offset = 0
+    #
+    pl1 = ffi.new('PointList*')
+    pl1.n = 2
+    pl1.points = p1 = ffi.new('Point[]', 2)
+    pl1.points[0] = (1, 2)
+    pl1.points[1] = (3, 4)
+    #
+    pl2 = ffi.new('PointList*')
+    pl2.n = 2
+    pl2.points = p2 = ffi.new('Point[]', 2)
+    pl2.points[0] = (1, 2)
+    pl2.points[1] = (3, 4)
     
+    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
+    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
+    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
+    assert h1 == h2
+    #
+    # now we make them different
+    p2[1].y = 400
+    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) != 0
+    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
+    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
+    assert h1 != h2
+    #
+    # now we tell it to consider only the first item, so they are equal again
+    pl1.n = 1
+    pl2.n = 1
+    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) == 0
+    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
+    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
+    assert h1 == h2
+    #
+    # finally, we check that if we have different lenghts, they are considered different
+    pl2.n = 2
+    assert lib.cfuhash_generic_cmp(pointlist_spec, pl1, pl2) != 0
+    h1 = lib.cfuhash_generic_hash(pointlist_spec, pl1)
+    h2 = lib.cfuhash_generic_hash(pointlist_spec, pl2)
+    assert h1 != h2
+
 
 
 def test_DictType(pyffi):

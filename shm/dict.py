@@ -41,10 +41,11 @@ dictffi.cdef("""
     unsigned int cfuhash_set_flag(cfuhash_table_t *ht, unsigned int new_flag);
     unsigned int cfuhash_clear_flag(cfuhash_table_t *ht, unsigned int new_flag);
 
-    typedef enum {
+    typedef enum { 
         cfuhash_fieldspec_stop=0,
         cfuhash_primitive,
-        cfuhash_pointer, 
+        cfuhash_pointer,
+        cfuhash_array,
         cfuhash_string
     } cfuhash_fieldkind_t;
 
@@ -53,10 +54,13 @@ dictffi.cdef("""
         cfuhash_fieldkind_t kind;
         size_t offset;
         struct cfuhash_fieldspec *fieldspec;
-        size_t size;   /* for cfuhash_primitive: size in bytes of the field
-                        * for cfuhash_pointer:   size in bytes of each item in the array
+        size_t size;   /* cfuhash_primitive:       size in bytes of the field
+                        * cfuhash_{pointer,array}: size in bytes of each item in the array
                         */
-        size_t length; /* for cfuhash_pointer: number of items in the array */
+        union {
+            size_t length;        /* cfuhash_pointer: number of items in the array */
+            size_t length_offset; /* cfuhash_array: offset where to find the length field */
+        };
     } cfuhash_fieldspec_t;
 
     int cfuhash_set_key_fieldspec(cfuhash_table_t *ht, cfuhash_fieldspec_t fs[]);

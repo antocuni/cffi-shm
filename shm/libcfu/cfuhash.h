@@ -52,6 +52,7 @@ typedef enum {
     cfuhash_fieldspec_stop=0,
     cfuhash_primitive,
     cfuhash_pointer,
+    cfuhash_array,
     cfuhash_string
 } cfuhash_fieldkind_t;
 
@@ -60,10 +61,13 @@ typedef struct cfuhash_fieldspec {
     cfuhash_fieldkind_t kind;
     size_t offset;
     struct cfuhash_fieldspec *fieldspec;
-    size_t size;   /* for cfuhash_primitive: size in bytes of the field
-                    * for cfuhash_pointer:   size in bytes of each item in the array
+    size_t size;   /* cfuhash_primitive:       size in bytes of the field
+                    * cfuhash_{pointer,array}: size in bytes of each item in the array
                     */
-    size_t length; /* for cfuhash_pointer: number of items in the array */
+    union {
+        size_t length;         /* cfuhash_pointer: number of items in the array */
+        size_t length_offset;  /* cfuhash_array: offset where to find the length field */
+    };
 } cfuhash_fieldspec_t;
 
 
@@ -306,6 +310,8 @@ void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 /* generic hash and cmp functions */
 int cfuhash_generic_cmp(cfuhash_fieldspec_t fields[], const void* key1, const void* key2);
 unsigned int cfuhash_generic_hash(cfuhash_fieldspec_t fields[], const void* key);
+
+#define CMP(a, b) ((a < b) ? -1 : (a > b))
 
 CFU_END_DECLS
 
