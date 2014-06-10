@@ -106,7 +106,18 @@ def test_fixed_size_list(pyffi):
     l = LT(range(5))
     assert l[0] == 0
     assert l[4] == 4
+    l[4] = 400
+    assert l[4] == 400
     py.test.raises(AttributeError, "l.append(5)")
+
+def test_immutable_list(pyffi):
+    LT = ListType(pyffi, 'long', immutable=True)
+    l = LT(range(5))
+    assert l[0] == 0
+    assert l[4] == 4
+    py.test.raises(TypeError, "l[4] = 400")
+    py.test.raises(AttributeError, "l.append(5)")
+           
 
 def test_inheritance(pyffi):
     class MyList(FixedSizeList):

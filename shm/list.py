@@ -17,12 +17,17 @@ listffi.cdef("""
 
 class ListType(AbstractGenericType):
 
-    def __init__(self, pyffi, itemtype, listclass=None):
+    def __init__(self, pyffi, itemtype, listclass=None, immutable=False):
         self.pyffi = pyffi
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
-        self.listclass = listclass or FixedSizeList
+        if immutable:
+            defaultclass = ImmutableList
+        else:
+            defaultclass = FixedSizeList
+        self.listclass = listclass or defaultclass
+        self.immutable = immutable
         #
         # if it's a primitive we do not need a converter, because the
         # conversion is already performed automatically by typeditems, which
@@ -52,7 +57,7 @@ class ListType(AbstractGenericType):
         return self.listclass.from_pointer(self, ptr)
 
 
-class FixedSizeList(object):
+class ImmutableList(object):
 
     def __new__(self, *args, **kwds):
         raise NotImplementedError
@@ -112,15 +117,19 @@ class FixedSizeList(object):
         i = self._getindex(i)
         return self._getitem(i)
 
-    def __setitem__(self, i, item):
-        i = self._getindex(i)
-        self._setitem(i, item)
-
     def __iter__(self):
         i = 0
         while i < self.lst.length:
             yield self._getitem(i)
             i += 1
+
+
+class FixedSizeList(ImmutableList):
+
+    def __setitem__(self, i, item):
+        i = self._getindex(i)
+        self._setitem(i, item)
+
 
 class ResizableList(FixedSizeList):
     """
