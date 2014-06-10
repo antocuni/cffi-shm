@@ -1,6 +1,6 @@
 import py
 from shm.sharedmem import sharedmem
-from shm.testing.test_dict import ffi, pyffi
+from shm.testing.test_dict import pyffi
 sharedmem.init('/cffi-shm-testing')
 
 def test_SetType(pyffi):
