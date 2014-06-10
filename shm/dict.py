@@ -2,7 +2,7 @@ import py
 import cffi
 from shm.sharedmem import sharedmem
 from shm.pyffi import AbstractGenericType
-from shm.libcfu import cfuffi, lib
+from shm.libcfu import cfuffi, cfuhash
 from shm.util import cffi_is_string, cffi_is_struct_ptr, cffi_is_struct
 
 
@@ -42,12 +42,12 @@ class DictType(AbstractGenericType):
 
     def __call__(self, init=None, root=True):
         with sharedmem.gc_disabled:
-            ptr = lib.cfuhash_new_with_malloc_fn(sharedmem.get_GC_malloc(),
-                                                 sharedmem.get_GC_free())
+            ptr = cfuhash.new_with_malloc_fn(sharedmem.get_GC_malloc(),
+                                             sharedmem.get_GC_free())
         if self.nocopy:
-            lib.cfuhash_set_flag(ptr, lib.CFUHASH_NOCOPY_KEYS)
+            cfuhash.set_flag(ptr, cfuhash.NOCOPY_KEYS)
         if self.key_fieldspec:
-            lib.cfuhash_set_key_fieldspec(ptr, self.key_fieldspec)
+            cfuhash.set_key_fieldspec(ptr, self.key_fieldspec)
         #
         if root:
             ptr = sharedmem.roots.add(cfuffi, ptr)
@@ -96,7 +96,7 @@ class DictInstance(object):
     def __getitem__(self, ckey):
         t = self.dictype
         key = self._key(ckey)
-        ret = lib.cfuhash_get_data(self.ht, key, t.keysize,
+        ret = cfuhash.get_data(self.ht, key, t.keysize,
                                    self.retbuffer, cfuffi.NULL)
         if ret == 0:
             return self.__missing__(ckey)
@@ -112,17 +112,17 @@ class DictInstance(object):
         key = self._key(key)
         value = t.valueconverter.from_python(value)
         value = t.ffi.cast('void*', value)
-        lib.cfuhash_put_data(self.ht, key, t.keysize, value, 0, cfuffi.NULL)
+        cfuhash.put_data(self.ht, key, t.keysize, value, 0, cfuffi.NULL)
 
     def __contains__(self, key):
         t = self.dictype
         key = self._key(key)
-        return bool(lib.cfuhash_exists_data(self.ht, key, t.keysize))
+        return bool(cfuhash.exists_data(self.ht, key, t.keysize))
 
     def __delitem__(self, key):
         t = self.dictype
         key = self._key(key)
-        ret = lib.cfuhash_delete_data(self.ht, key, t.keysize)
+        ret = cfuhash.delete_data(self.ht, key, t.keysize)
         if ret == t.ffi.NULL:
             raise KeyError(key)
 
@@ -143,7 +143,7 @@ class DictInstance(object):
     def keys(self):
         t = self.dictype
         sizeptr = cfuffi.new('size_t[1]')
-        keys_array = lib.cfuhash_keys(self.ht, sizeptr, True)
+        keys_array = cfuhash.keys(self.ht, sizeptr, True)
         if keys_array == cfuffi.NULL:
             raise MemoryError
         try:
@@ -155,7 +155,7 @@ class DictInstance(object):
                 keys.append(key)
             return keys
         finally:
-            lib.free(keys_array)
+            cfuhash._lib.free(keys_array)
 
     def values(self):
         vals = []
