@@ -1,7 +1,7 @@
 import pytest
 import cffi
 from shm.sharedmem import sharedmem
-from shm.libcfu import cfuffi, lib
+from shm.libcfu import cfuffi, cfuhash
 sharedmem.init('/cffi-shm-testing')
 
 @pytest.fixture
@@ -11,19 +11,19 @@ def ffi():
 
 def check_dict(ffi, d):
     keysize = ffi.cast('size_t', -1)
-    assert not lib.cfuhash_exists_data(d, "hello", keysize)
-    lib.cfuhash_put_data(d, "hello", keysize,
+    assert not cfuhash.exists_data(d, "hello", keysize)
+    cfuhash.put_data(d, "hello", keysize,
                          ffi.cast('void*', 42), 0, ffi.NULL)
-    assert lib.cfuhash_exists_data(d, "hello", keysize)
-    value = lib.cfuhash_get(d, "hello")
+    assert cfuhash.exists_data(d, "hello", keysize)
+    value = cfuhash.get(d, "hello")
     assert int(ffi.cast("long", value)) == 42
 
 def test_libcfu(ffi):
     from shm import gclib
     # first, we check that it works with the system malloc
-    d = lib.cfuhash_new()
+    d = cfuhash.new()
     check_dict(ffi, d)
-    lib.cfuhash_destroy(d)
+    cfuhash.destroy(d)
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d < gc_base_mem
@@ -31,10 +31,10 @@ def test_libcfu(ffi):
 def test_libcfu_gc(ffi):
     from shm import gclib
     # then, we check that it works with the the GC malloc
-    d = lib.cfuhash_new_with_malloc_fn(gclib.lib.get_GC_malloc(),
+    d = cfuhash.new_with_malloc_fn(gclib.lib.get_GC_malloc(),
                                        gclib.lib.get_GC_free())
     check_dict(ffi, d)
-    lib.cfuhash_destroy(d)
+    cfuhash.destroy(d)
     #
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
@@ -46,17 +46,17 @@ def make_fieldspec(ffi, t, spec):
     for i, (fieldname, kind) in enumerate(spec):
         fieldspec[i].kind = kind
         fieldspec[i].offset = ffi.offsetof(t, fieldname)
-        if kind == lib.cfuhash_pointer:
+        if kind == cfuhash.pointer:
             fieldspec[i].length = 1
         else:
             fieldspec[i].size = ffi.sizeof(fields[fieldname].type)
-    fieldspec[i+1].kind = lib.cfuhash_fieldspec_stop
+    fieldspec[i+1].kind = cfuhash.fieldspec_stop
     return fieldspec
 
 def generic_cmp(fieldspec, p1, p2):
-    res = lib.cfuhash_generic_cmp(fieldspec, p1, p2)
-    h1 = lib.cfuhash_generic_hash(fieldspec, p1)
-    h2 = lib.cfuhash_generic_hash(fieldspec, p2)
+    res = cfuhash.generic_cmp(fieldspec, p1, p2)
+    h1 = cfuhash.generic_hash(fieldspec, p1)
+    h2 = cfuhash.generic_hash(fieldspec, p2)
     if res == 0:
         assert h1 == h2
     else:
@@ -78,9 +78,9 @@ def test_libcfu_generic_cmp_primitive(ffi):
         p.z = z
         return p
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
-                                               ('y', lib.cfuhash_primitive),
-                                               ('z', lib.cfuhash_primitive)])
+    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
+                                               ('y', cfuhash.primitive),
+                                               ('z', cfuhash.primitive)])
     p1 = Point(1, 2, 3)
     p2 = Point(1, 2, 3)
     p3 = Point(1, 2, 300)
@@ -89,7 +89,7 @@ def test_libcfu_generic_cmp_primitive(ffi):
     assert generic_cmp(point_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore z, so that p1 and p3 are equal
-    point_spec[2].kind = lib.cfuhash_fieldspec_stop
+    point_spec[2].kind = cfuhash.fieldspec_stop
     assert generic_cmp(point_spec, p1, p2) == 0
     assert generic_cmp(point_spec, p1, p3) == 0
 
@@ -115,9 +115,9 @@ def test_libcfu_generic_cmp_string(ffi):
         p.empty = ffi.NULL
         return p
     #
-    person_spec = make_fieldspec(ffi, 'Person', [('name', lib.cfuhash_string),
-                                                 ('surname', lib.cfuhash_string),
-                                                 ('empty', lib.cfuhash_string)])
+    person_spec = make_fieldspec(ffi, 'Person', [('name', cfuhash.string),
+                                                 ('surname', cfuhash.string),
+                                                 ('empty', cfuhash.string)])
     p1 = Person('Hello', 'World')
     p2 = Person('Hello', 'World')
     p3 = Person('Hello', 'ZZZ')
@@ -126,7 +126,7 @@ def test_libcfu_generic_cmp_string(ffi):
     assert generic_cmp(person_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
-    person_spec[1].kind = lib.cfuhash_fieldspec_stop
+    person_spec[1].kind = cfuhash.fieldspec_stop
     assert generic_cmp(person_spec, p1, p2) == 0
     assert generic_cmp(person_spec, p1, p3) == 0
 
@@ -158,11 +158,11 @@ def test_libcfu_generic_cmp_pointer(ffi):
         keepalive.append(r)
         return r
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
-                                               ('y', lib.cfuhash_primitive)])
-    rect_spec = make_fieldspec(ffi, 'Rectangle', [('a', lib.cfuhash_primitive),
-                                                  ('b', lib.cfuhash_primitive),
-                                                  ('c', lib.cfuhash_primitive)])
+    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
+                                               ('y', cfuhash.primitive)])
+    rect_spec = make_fieldspec(ffi, 'Rectangle', [('a', cfuhash.primitive),
+                                                  ('b', cfuhash.primitive),
+                                                  ('c', cfuhash.primitive)])
     p1 = Point(1, 2)
     p2 = Point(1, 2)
     p3 = Point(3, 4)
@@ -179,7 +179,7 @@ def test_libcfu_generic_cmp_pointer(ffi):
     #
     # fix rect_spec to compare a and b as pointers
     for i in range(3):
-        rect_spec[i].kind = lib.cfuhash_pointer
+        rect_spec[i].kind = cfuhash.pointer
         rect_spec[i].fieldspec = point_spec
         rect_spec[i].length = 1
     assert generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
@@ -196,10 +196,10 @@ def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
         } PointList;
     """)
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
-                                               ('y', lib.cfuhash_primitive)])
+    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
+                                               ('y', cfuhash.primitive)])
     pointlist_spec = make_fieldspec(ffi, 'PointList',
-                                    [('points', lib.cfuhash_pointer)])
+                                    [('points', cfuhash.pointer)])
     #
     pointlist_spec[0].fieldspec = point_spec
     pointlist_spec[0].size = ffi.sizeof('Point')
@@ -239,11 +239,11 @@ def test_libcfu_generic_cmp_array(ffi):
         } PointList;
     """)
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', lib.cfuhash_primitive),
-                                               ('y', lib.cfuhash_primitive)])
+    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
+                                               ('y', cfuhash.primitive)])
     pointlist_spec = make_fieldspec(ffi, 'PointList',
-                                    [('n', lib.cfuhash_primitive),
-                                     ('points', lib.cfuhash_array)])
+                                    [('n', cfuhash.primitive),
+                                     ('points', cfuhash.array)])
     #
     pointlist_spec[1].fieldspec = point_spec
     pointlist_spec[1].size = ffi.sizeof('Point')

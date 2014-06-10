@@ -104,7 +104,7 @@ def check_fieldspec(spec, kind, offset, size, fieldspec=None):
 
 def test_fieldspec():
     from shm import gclib
-    from shm.dict import lib
+    from shm.libcfu import cfuhash
     ffi = cffi.FFI()
     ffi.cdef("""
         typedef struct {
@@ -121,19 +121,19 @@ def test_fieldspec():
     Point = pyffi.struct('Point')
     ps = Point.__fieldspec__
     assert len(ps) == 4
-    prim = lib.cfuhash_primitive
-    string = lib.cfuhash_string
-    pointer = lib.cfuhash_pointer
+    prim = cfuhash.primitive
+    string = cfuhash.string
+    pointer = cfuhash.pointer
     check_fieldspec(ps[0], prim, ffi.offsetof('Point', 'x'), ffi.sizeof('long'))
     check_fieldspec(ps[1], prim, ffi.offsetof('Point', 'y'), ffi.sizeof('long'))
     check_fieldspec(ps[2], prim, ffi.offsetof('Point', 'c'), ffi.sizeof('char'))
-    check_fieldspec(ps[3], lib.cfuhash_fieldspec_stop, None, None)
+    check_fieldspec(ps[3], cfuhash.fieldspec_stop, None, None)
     #
     NamedPoint = pyffi.struct('NamedPoint')
     nps = NamedPoint.__fieldspec__
     check_fieldspec(nps[0], string, offset=None, size=0)
     check_fieldspec(nps[1], pointer, offset=None, size=None, fieldspec=ps)
-    check_fieldspec(nps[2], lib.cfuhash_fieldspec_stop, None, None)
+    check_fieldspec(nps[2], cfuhash.fieldspec_stop, None, None)
 
 def test_string():
     from shm import gclib
