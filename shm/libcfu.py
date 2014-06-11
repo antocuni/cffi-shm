@@ -1,6 +1,6 @@
 import py
 import cffi
-from shm.util import cffi_typeof, cffi_is_struct_ptr, cffi_is_primitive
+from shm.util import cffi_typeof, cffi_is_struct_ptr, cffi_is_primitive, cffi_is_string
 from shm.sharedmem import sharedmem
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
@@ -143,19 +143,27 @@ class FieldSpec(object):
         #
         spec = FieldSpec(ffi, t)
         name = '<%s>' % typ
+        extra = {}
         if cffi_is_primitive(ffi, t):
-            spec._add(name, cfuhash.primitive, ffi.sizeof(t), offset=0)
+            kind = cfuhash.primitive
+            size = ffi.sizeof(t)
+        elif cffi_is_string(ffi, t):
+            kind = cfuhash.string
+            size = 0
         elif cffi_is_struct_ptr(ffi, t):
             pytype = pyffi.pytypeof(t)
             itemspec = pytype.__fieldspec__
             if itemspec is None:
                 # if the items are mutable, we can't be immutable
                 return None
-            spec._add(name, cfuhash.pointer, ffi.sizeof(t), offset=0, length=1,
-                      fieldspec=itemspec)
+            kind = cfuhash.pointer
+            size = ffi.sizeof(t)
+            extra['length'] = 1
+            extra['fieldspec'] = itemspec
         else:
             assert False, 'implement me'
         #
+        spec._add(name, kind, size, offset=0, **extra)
         cls._pointer_spec_cache[t] = spec
         return spec
 

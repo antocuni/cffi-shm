@@ -153,6 +153,18 @@ def test_immutable_list_of_structs(pyffi):
     assert generic_cmp(spec, a.lst, c.lst) != 0
     assert generic_cmp(spec, c.lst, a.lst) != 0
 
+def test_immutable_list_of_strings(pyffi):
+    from shm.testing.test_libcfu import generic_cmp
+    LT = ListType(pyffi, 'const char*', immutable=True)
+    spec = LT.__fieldspec__
+    assert spec is not None
+    a = LT(['foo', 'bar'])
+    b = LT(['foo', 'bar'])
+    c = LT(['foo', 'hello'])
+    assert generic_cmp(spec, a.lst, b.lst) == 0
+    assert generic_cmp(spec, a.lst, c.lst) != 0
+    assert generic_cmp(spec, c.lst, a.lst) != 0
+
 def test_inheritance(pyffi):
     class MyList(FixedSizeList):
         def foo(self):
