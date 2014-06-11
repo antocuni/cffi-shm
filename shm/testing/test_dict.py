@@ -180,6 +180,17 @@ def test_key_struct_with_pointers(pyffi):
     keys = sorted(d.keys())
     assert keys == [antocuni, wrongname]
 
+def test_keys_list_of_strings(pyffi):
+    LT = pyffi.list('const char*', immutable=True, cname='LT')
+    DT = pyffi.dict('LT*', 'long')
+    a = LT(['foo', 'bar'])
+    b = LT(['foo', 'bar'])
+    c = LT(['foo', 'hello'])
+    d = DT()
+    d[a] = 42
+    assert d[a] == 42
+    assert d[b] == 42
+    assert c not in d
 
 def test_defaultdict(pyffi):
     DT = pyffi.defaultdict('const char*', 'long', lambda: 42)
