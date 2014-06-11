@@ -1,5 +1,7 @@
 import py
 import cffi
+from shm.util import cffi_typeof
+from shm.sharedmem import sharedmem
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
 old_cwd = ROOTDIR.chdir()
@@ -88,3 +90,61 @@ class CNamespace(object):
                 setattr(self, key, value)
 
 cfuhash = CNamespace(lib, 'cfuhash_')
+
+class Field(object):
+
+    def __init__(self, name, kind, size, offset, fieldspec=None,
+                 length=None, length_offset=None):
+        if length is not None and length_offset is not None:
+            raise TypeError("Cannot specify both length and length_offset")
+        self.name = name
+        self.kind = kind
+        self.offset = offset
+        self.size = size
+        self.fieldspec = fieldspec
+        self.length = length
+        self.length_offset = length_offset
+
+    def get_init_dict(self):
+        d = {}
+        d['name'] = sharedmem.new_string(self.name)
+        d['kind'] = self.kind
+        d['offset'] = self.offset
+        d['size'] = self.size
+        if self.fieldspec is not None:
+            d['fieldspec'] = self.fieldspec.getptr()
+        if self.length is not None:
+            d['length'] = self.length
+        if self.length_offset is not None:
+            d['length_offset'] = self.length_offset
+        return d
+
+
+class FieldSpec(object):
+
+    def __init__(self, ffi, t):
+        self.ffi = ffi
+        self.t = cffi_typeof(ffi, t)
+        self.typename = self.t.cname
+        self.fields = []
+        self.ptr = None
+
+    def add(self, name, kind, size, **kwargs):
+        if 'offset' not in kwargs:
+            kwargs['offset'] = self.ffi.offsetof(self.t, name)
+        self._add(name, kind, size, **kwargs)
+
+    def _add(self, name, kind, size, offset, **kwargs):
+        assert self.ptr is None, 'Cannot add new fields after .getptr()'
+        name = '%s.%s' % (self.typename, name)
+        f = Field(name, kind, size, offset, **kwargs)
+        self.fields.append(f)
+
+
+    def getptr(self):
+        if self.ptr is not None:
+            return self.ptr
+        self._add('<stop>', cfuhash.fieldspec_stop, 0, 0)
+        fields = [f.get_init_dict() for f in self.fields]
+        self.ptr = cfuffi.new('cfuhash_fieldspec_t[]', fields)
+        return self.ptr

@@ -1,7 +1,7 @@
 import pytest
 import cffi
 from shm.sharedmem import sharedmem
-from shm.libcfu import cfuffi, cfuhash
+from shm.libcfu import cfuffi, cfuhash, FieldSpec
 sharedmem.init('/cffi-shm-testing')
 
 @pytest.fixture
@@ -39,24 +39,11 @@ def test_libcfu_gc(ffi):
     gc_base_mem = gclib.lib.GC_get_memory()
     assert d >= gc_base_mem
 
-def make_fieldspec(ffi, t, spec):
-    n = len(spec)+1
-    fields = dict(ffi.typeof(t).fields)
-    fieldspec = cfuffi.new('cfuhash_fieldspec_t[]', n)
-    for i, (fieldname, kind) in enumerate(spec):
-        fieldspec[i].kind = kind
-        fieldspec[i].offset = ffi.offsetof(t, fieldname)
-        if kind == cfuhash.pointer:
-            fieldspec[i].length = 1
-        else:
-            fieldspec[i].size = ffi.sizeof(fields[fieldname].type)
-    fieldspec[i+1].kind = cfuhash.fieldspec_stop
-    return fieldspec
-
 def generic_cmp(fieldspec, p1, p2):
-    res = cfuhash.generic_cmp(fieldspec, p1, p2)
-    h1 = cfuhash.generic_hash(fieldspec, p1)
-    h2 = cfuhash.generic_hash(fieldspec, p2)
+    ptrspec = fieldspec.getptr()
+    res = cfuhash.generic_cmp(ptrspec, p1, p2)
+    h1 = cfuhash.generic_hash(ptrspec, p1)
+    h2 = cfuhash.generic_hash(ptrspec, p2)
     if res == 0:
         assert h1 == h2
     else:
@@ -78,9 +65,11 @@ def test_libcfu_generic_cmp_primitive(ffi):
         p.z = z
         return p
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
-                                               ('y', cfuhash.primitive),
-                                               ('z', cfuhash.primitive)])
+    point_spec = FieldSpec(ffi, 'Point')
+    point_spec.add('x', cfuhash.primitive, ffi.sizeof('long'))
+    point_spec.add('y', cfuhash.primitive, ffi.sizeof('long'))
+    point_spec.add('z', cfuhash.primitive, ffi.sizeof('long'))
+    
     p1 = Point(1, 2, 3)
     p2 = Point(1, 2, 3)
     p3 = Point(1, 2, 300)
@@ -89,7 +78,7 @@ def test_libcfu_generic_cmp_primitive(ffi):
     assert generic_cmp(point_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore z, so that p1 and p3 are equal
-    point_spec[2].kind = cfuhash.fieldspec_stop
+    point_spec.ptr[2].kind = cfuhash.fieldspec_stop
     assert generic_cmp(point_spec, p1, p2) == 0
     assert generic_cmp(point_spec, p1, p3) == 0
 
@@ -115,9 +104,11 @@ def test_libcfu_generic_cmp_string(ffi):
         p.empty = ffi.NULL
         return p
     #
-    person_spec = make_fieldspec(ffi, 'Person', [('name', cfuhash.string),
-                                                 ('surname', cfuhash.string),
-                                                 ('empty', cfuhash.string)])
+    person_spec = FieldSpec(ffi, 'Person')
+    person_spec.add('name', cfuhash.string, 0)
+    person_spec.add('surname', cfuhash.string, 0)
+    person_spec.add('empty', cfuhash.string, 0)
+
     p1 = Person('Hello', 'World')
     p2 = Person('Hello', 'World')
     p3 = Person('Hello', 'ZZZ')
@@ -126,11 +117,11 @@ def test_libcfu_generic_cmp_string(ffi):
     assert generic_cmp(person_spec, p3, p1) > 0
     #
     # now we "cut" the fieldspec to ignore surname, so that p1 and p3 are equal
-    person_spec[1].kind = cfuhash.fieldspec_stop
+    person_spec.ptr[1].kind = cfuhash.fieldspec_stop
     assert generic_cmp(person_spec, p1, p2) == 0
     assert generic_cmp(person_spec, p1, p3) == 0
 
-def test_libcfu_generic_cmp_pointer(ffi):
+def test_libcfu_generic_cmp_pointer_x(ffi):
     ffi.cdef("""
         typedef struct {
             long x;
@@ -144,45 +135,30 @@ def test_libcfu_generic_cmp_pointer(ffi):
         } Rectangle;
     """)
     keepalive = []
-    def Point(x, y):
-        p = ffi.new('Point*')
-        p.x = x
-        p.y = y
-        keepalive.append(p)
-        return p
-    def Rectangle(a, b):
+    def Rectangle(p1, p2):
+        p1 = ffi.new('Point*', p1)
+        p2 = ffi.new('Point*', p2)
         r = ffi.new('Rectangle*')
-        r.a = a
-        r.b = b
+        r.a = p1
+        r.b = p2
         r.c = ffi.NULL
-        keepalive.append(r)
+        keepalive.append((r, p1, p2))
         return r
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
-                                               ('y', cfuhash.primitive)])
-    rect_spec = make_fieldspec(ffi, 'Rectangle', [('a', cfuhash.primitive),
-                                                  ('b', cfuhash.primitive),
-                                                  ('c', cfuhash.primitive)])
-    p1 = Point(1, 2)
-    p2 = Point(1, 2)
-    p3 = Point(3, 4)
+    point_spec = FieldSpec(ffi, 'Point')
+    point_spec.add('x', cfuhash.primitive, ffi.sizeof('long'))
+    point_spec.add('y', cfuhash.primitive, ffi.sizeof('long'))
     #
-    r1 = Rectangle(p1, p1)
-    r2 = Rectangle(p2, p2)
-    r3 = Rectangle(p3, p3)
+    rect_spec = FieldSpec(ffi, 'Rectangle')
+    rect_spec.add('a', cfuhash.pointer, ffi.sizeof('Point'), fieldspec=point_spec, length=1)
+    rect_spec.add('b', cfuhash.pointer, ffi.sizeof('Point'), fieldspec=point_spec, length=1)
+    rect_spec.add('c', cfuhash.pointer, ffi.sizeof('Point'), fieldspec=point_spec, length=1)
     #
-    # Rectangle.{a,b} are compared as primitive fields, so r1 and r2 are
-    # different
-    assert generic_cmp(rect_spec, r1, r2) != 0
-    assert generic_cmp(rect_spec, r1, r3) != 0
-    assert generic_cmp(rect_spec, r2, r3) != 0
+    r1 = Rectangle((1, 2), (3, 4))
+    r2 = Rectangle((1, 2), (3, 4))
+    r3 = Rectangle((1, 2), (5, 6))
     #
-    # fix rect_spec to compare a and b as pointers
-    for i in range(3):
-        rect_spec[i].kind = cfuhash.pointer
-        rect_spec[i].fieldspec = point_spec
-        rect_spec[i].length = 1
-    assert generic_cmp(rect_spec, r1, r2) == 0 # now they are equal
+    assert generic_cmp(rect_spec, r1, r2) == 0
     assert generic_cmp(rect_spec, r1, r3) != 0
 
 def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
@@ -196,14 +172,13 @@ def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
         } PointList;
     """)
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
-                                               ('y', cfuhash.primitive)])
-    pointlist_spec = make_fieldspec(ffi, 'PointList',
-                                    [('points', cfuhash.pointer)])
+    point_spec = FieldSpec(ffi, 'Point')
+    point_spec.add('x', cfuhash.primitive, ffi.sizeof('long'))
+    point_spec.add('y', cfuhash.primitive, ffi.sizeof('long'))
     #
-    pointlist_spec[0].fieldspec = point_spec
-    pointlist_spec[0].size = ffi.sizeof('Point')
-    pointlist_spec[0].length = 2  # consider two points
+    pointlist_spec = FieldSpec(ffi, 'PointList')
+    pointlist_spec.add('points', cfuhash.pointer, size = ffi.sizeof('Point'),
+                       fieldspec = point_spec, length = 2)
     #
     pl1 = ffi.new('PointList*')
     pl1.points = p1 = ffi.new('Point[]', 2)
@@ -223,7 +198,7 @@ def test_libcfu_generic_cmp_pointer_fixedlen(ffi):
     #
     # now we change the spec to consider only the first item, so they are
     # "equal" again
-    pointlist_spec[0].length = 1
+    pointlist_spec.ptr[0].length = 1
     assert generic_cmp(pointlist_spec, pl1, pl2) == 0
 
 
@@ -239,15 +214,14 @@ def test_libcfu_generic_cmp_array(ffi):
         } PointList;
     """)
     #
-    point_spec = make_fieldspec(ffi, 'Point', [('x', cfuhash.primitive),
-                                               ('y', cfuhash.primitive)])
-    pointlist_spec = make_fieldspec(ffi, 'PointList',
-                                    [('n', cfuhash.primitive),
-                                     ('points', cfuhash.array)])
+    point_spec = FieldSpec(ffi, 'Point')
+    point_spec.add('x', cfuhash.primitive, ffi.sizeof('long'))
+    point_spec.add('y', cfuhash.primitive, ffi.sizeof('long'))
     #
-    pointlist_spec[1].fieldspec = point_spec
-    pointlist_spec[1].size = ffi.sizeof('Point')
-    pointlist_spec[1].length_offset = 0
+    pointlist_spec = FieldSpec(ffi, 'PointList')
+    pointlist_spec.add('n', cfuhash.primitive, ffi.sizeof('long'))
+    pointlist_spec.add('points', cfuhash.array, size = ffi.sizeof('Point'),
+                       fieldspec = point_spec, length_offset = 0)
     #
     pl1 = ffi.new('PointList*')
     pl1.n = 2
