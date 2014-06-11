@@ -119,7 +119,7 @@ def test_fieldspec():
     """)
     pyffi = PyFFI(ffi)
     Point = pyffi.struct('Point')
-    ps = Point.__fieldspec__
+    ps = Point.__fieldspec__.getptr()
     assert len(ps) == 4
     prim = cfuhash.primitive
     string = cfuhash.string
@@ -130,7 +130,7 @@ def test_fieldspec():
     check_fieldspec(ps[3], cfuhash.fieldspec_stop, None, None)
     #
     NamedPoint = pyffi.struct('NamedPoint')
-    nps = NamedPoint.__fieldspec__
+    nps = NamedPoint.__fieldspec__.getptr()
     check_fieldspec(nps[0], string, offset=None, size=0)
     check_fieldspec(nps[1], pointer, offset=None, size=None, fieldspec=ps)
     check_fieldspec(nps[2], cfuhash.fieldspec_stop, None, None)

@@ -111,30 +111,21 @@ class StructDecorator(object):
         cls.__eq__ = __eq__
 
     def make_fieldspec(self, cls):
-        from shm.libcfu import cfuffi, cfuhash
-        n = len(self.ctype.item.fields) + 1
-        fieldspec = sharedmem.new_array(cfuffi, 'cfuhash_fieldspec_t', n)
-        for i, (fieldname, field) in enumerate(self.ctype.item.fields):
-            f = fieldspec[i]
-            f.name = sharedmem.new_string('%s.%s' % (self.ctype.item.cname, fieldname))
-            f.offset = field.offset
+        from shm.libcfu import cfuffi, cfuhash, FieldSpec
+        fieldspec = FieldSpec(self.ffi, self.ctype.item)
+        for name, field in self.ctype.item.fields:
             if field.type.kind in ('primitive', 'array'):
-                f.kind = cfuhash.primitive
-                f.size = self.ffi.sizeof(field.type)
+                fieldspec.add(name, cfuhash.primitive, self.ffi.sizeof(field.type))
             elif cffi_is_string(self.ffi, field.type):
-                f.kind = cfuhash.string
-                f.size = 0
+                fieldspec.add(name, cfuhash.string, 0)
             elif cffi_is_struct_ptr(self.ffi, field.type):
                 pytype = self.pyffi.pytypeof(field.type)
                 if not pytype.__immutable__:
                     return None
-                f.kind = cfuhash.pointer
-                f.fieldspec = pytype.__fieldspec__
-                f.length = 1
+                fieldspec.add(name, cfuhash.pointer, size=0,
+                              fieldspec = pytype.__fieldspec__, length = 1)
             else:
                 assert False, 'unknown field kind'
-        #
-        fieldspec[i+1].kind = cfuhash.fieldspec_stop
         return fieldspec
 
     def add_property(self, cls, fieldname, field):

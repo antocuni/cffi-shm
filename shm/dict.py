@@ -47,7 +47,7 @@ class DictType(AbstractGenericType):
         if self.nocopy:
             cfuhash.set_flag(ptr, cfuhash.NOCOPY_KEYS)
         if self.key_fieldspec:
-            cfuhash.set_key_fieldspec(ptr, self.key_fieldspec)
+            cfuhash.set_key_fieldspec(ptr, self.key_fieldspec.getptr())
         #
         if root:
             ptr = sharedmem.roots.add(cfuffi, ptr)
