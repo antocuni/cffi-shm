@@ -1,6 +1,6 @@
 import py
 import cffi
-from shm.util import cffi_typeof
+from shm.util import cffi_typeof, cffi_is_struct_ptr, cffi_is_primitive
 from shm.sharedmem import sharedmem
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
@@ -129,22 +129,34 @@ class FieldSpec(object):
         self.fields = []
         self.ptr = None
 
-    _primitive_type_cache = {}
+    _pointer_spec_cache = {}
     @classmethod
-    def from_primitive_type(cls, t):
+    def for_pointer(cls, pyffi, typ):
         """
-        Return a fieldspec for a pointer to a primitive type
-        (e.g. 'long*'). This is equivalent to a struct having exactly one
-        field of the desired type
+        Return a fieldspec for a pointer to a type (e.g. 'long*'). This is
+        equivalent to a struct having exactly one field of the desired type
         """
-        t = cffi_typeof(cfuffi, t)
-        assert t.kind == 'primitive'
-        if t in cls._primitive_type_cache:
-            return cls._primitive_type_cache[t]
+        ffi = pyffi.ffi
+        t = cffi_typeof(ffi, typ)
+        if t in cls._pointer_spec_cache:
+            return cls._pointer_spec_cache[t]
         #
-        spec = FieldSpec(cfuffi, t)
-        spec._add('<long>', cfuhash.primitive, cfuffi.sizeof(t), offset=0)
-        cls._primitive_type_cache[t] = spec
+        spec = FieldSpec(ffi, t)
+        name = '<%s>' % typ
+        if cffi_is_primitive(ffi, t):
+            spec._add(name, cfuhash.primitive, ffi.sizeof(t), offset=0)
+        elif cffi_is_struct_ptr(ffi, t):
+            pytype = pyffi.pytypeof(t)
+            itemspec = pytype.__fieldspec__
+            if itemspec is None:
+                # if the items are mutable, we can't be immutable
+                return None
+            spec._add(name, cfuhash.pointer, ffi.sizeof(t), offset=0, length=1,
+                      fieldspec=itemspec)
+        else:
+            assert False, 'implement me'
+        #
+        cls._pointer_spec_cache[t] = spec
         return spec
 
 

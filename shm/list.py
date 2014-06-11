@@ -41,11 +41,11 @@ class ListType(AbstractGenericType):
 
     def make_fieldspec(self):
         from shm.libcfu import cfuhash, FieldSpec
+        itemspec = FieldSpec.for_pointer(self.pyffi, self.itemtype)
         spec = FieldSpec(listffi, 'List')
         # note that we are deliberatly ignoring the field 'size': we do not
         # care how many items we have preallocated for doing comparisons
         spec.add('length', cfuhash.primitive, listffi.sizeof('long'))
-        itemspec = FieldSpec.from_primitive_type(self.itemtype)
         spec.add('items', cfuhash.array, self.ffi.sizeof(self.itemtype),
                  length_offset = listffi.offsetof('List', 'length'),
                  fieldspec = itemspec)

@@ -12,6 +12,10 @@ def cffi_typeof(ffi, t):
         return ffi.typeof(t)
     return t
 
+def cffi_is_primitive(ffi, t):
+    ctype = cffi_typeof(ffi, t)
+    return ctype.kind == 'primitive'
+
 def cffi_is_string(ffi, t):
     return cffi_typeof(ffi, t) == ffi.typeof('char*')
 
