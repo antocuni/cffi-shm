@@ -129,14 +129,33 @@ class FieldSpec(object):
         self.fields = []
         self.ptr = None
 
+    _primitive_type_cache = {}
+    @classmethod
+    def from_primitive_type(cls, t):
+        """
+        Return a fieldspec for a pointer to a primitive type
+        (e.g. 'long*'). This is equivalent to a struct having exactly one
+        field of the desired type
+        """
+        t = cffi_typeof(cfuffi, t)
+        assert t.kind == 'primitive'
+        if t in cls._primitive_type_cache:
+            return cls._primitive_type_cache[t]
+        #
+        spec = FieldSpec(cfuffi, t)
+        spec._add('<long>', cfuhash.primitive, cfuffi.sizeof(t), offset=0)
+        cls._primitive_type_cache[t] = spec
+        return spec
+
+
     def add(self, name, kind, size, **kwargs):
         if 'offset' not in kwargs:
             kwargs['offset'] = self.ffi.offsetof(self.t, name)
+        name = '%s.%s' % (self.typename, name)
         self._add(name, kind, size, **kwargs)
 
     def _add(self, name, kind, size, offset, **kwargs):
         assert self.ptr is None, 'Cannot add new fields after .getptr()'
-        name = '%s.%s' % (self.typename, name)
         f = Field(name, kind, size, offset, **kwargs)
         self.fields.append(f)
 

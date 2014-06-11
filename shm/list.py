@@ -9,9 +9,9 @@ listffi = cffi.FFI()
 
 listffi.cdef("""
     typedef struct {
-        void* items;
         long size;   // number of allocated items
         long length; // number of actually used items
+        void* items;
     } List;
 """)
 
@@ -24,8 +24,10 @@ class ListType(AbstractGenericType):
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
         if immutable:
             defaultclass = ImmutableList
+            self.__fieldspec__ = self.make_fieldspec()
         else:
             defaultclass = FixedSizeList
+            self.__fieldspec__ = None
         self.listclass = listclass or defaultclass
         self.immutable = immutable
         #
@@ -36,6 +38,18 @@ class ListType(AbstractGenericType):
             self.conv = Dummy(self.ffi, itemtype)
         else:
             self.conv = pyffi.get_converter(itemtype)
+
+    def make_fieldspec(self):
+        from shm.libcfu import cfuhash, FieldSpec
+        spec = FieldSpec(listffi, 'List')
+        # note that we are deliberatly ignoring the field 'size': we do not
+        # care how many items we have preallocated for doing comparisons
+        spec.add('length', cfuhash.primitive, listffi.sizeof('long'))
+        itemspec = FieldSpec.from_primitive_type(self.itemtype)
+        spec.add('items', cfuhash.array, self.ffi.sizeof(self.itemtype),
+                 length_offset = listffi.offsetof('List', 'length'),
+                 fieldspec = itemspec)
+        return spec
 
     def __repr__(self):
         return '<shm type list [%s]>' % self.itemtype
@@ -55,7 +69,6 @@ class ListType(AbstractGenericType):
     def from_pointer(self, ptr):
         ptr = listffi.cast('List*', ptr)
         return self.listclass.from_pointer(self, ptr)
-
 
 class ImmutableList(object):
 

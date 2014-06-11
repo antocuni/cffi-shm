@@ -117,7 +117,21 @@ def test_immutable_list(pyffi):
     assert l[4] == 4
     py.test.raises(TypeError, "l[4] = 400")
     py.test.raises(AttributeError, "l.append(5)")
-           
+
+def test_immutable_list_fieldspec(pyffi):
+    from shm.testing.test_libcfu import generic_cmp
+    LT = ListType(pyffi, 'long', immutable=True)
+    spec = LT.__fieldspec__
+    assert spec is not None
+    a = LT([1, 2, 3])
+    b = LT([1, 2, 3])
+    c = LT([1, 2, 3, 4])
+    d = LT([1, 2, 5])
+    assert generic_cmp(spec, a.lst, b.lst) == 0
+    assert generic_cmp(spec, a.lst, c.lst) != 0
+    assert generic_cmp(spec, c.lst, a.lst) != 0
+    assert generic_cmp(spec, a.lst, d.lst) != 0
+    assert generic_cmp(spec, d.lst, a.lst) != 0
 
 def test_inheritance(pyffi):
     class MyList(FixedSizeList):
