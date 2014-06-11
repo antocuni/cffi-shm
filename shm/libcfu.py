@@ -145,6 +145,8 @@ class FieldSpec(object):
         if self.ptr is not None:
             return self.ptr
         self._add('<stop>', cfuhash.fieldspec_stop, 0, 0)
-        fields = [f.get_init_dict() for f in self.fields]
-        self.ptr = cfuffi.new('cfuhash_fieldspec_t[]', fields)
+        n = len(self.fields)
+        self.ptr = sharedmem.new_array(cfuffi, 'cfuhash_fieldspec_t', n)
+        for i, field in enumerate(self.fields):
+            self.ptr[i] = field.get_init_dict()
         return self.ptr
