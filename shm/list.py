@@ -22,6 +22,7 @@ class ListType(AbstractGenericType):
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
+        self.__immutable__ = immutable
         if immutable:
             defaultclass = ImmutableList
             self.__fieldspec__ = self.make_fieldspec()
@@ -29,7 +30,6 @@ class ListType(AbstractGenericType):
             defaultclass = FixedSizeList
             self.__fieldspec__ = None
         self.listclass = listclass or defaultclass
-        self.immutable = immutable
         #
         # if it's a primitive we do not need a converter, because the
         # conversion is already performed automatically by typeditems, which
