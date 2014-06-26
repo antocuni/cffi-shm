@@ -23,9 +23,11 @@ class BaseStruct(object):
     __slots__ = ('_ptr',)
 
     @classmethod
-    def from_pointer(cls, ptr):
+    def from_pointer(cls, ptr, force_cast=False):
         ffi = cls.pyffi.ffi
-        if cls.ctype != ffi.typeof(ptr):
+        if force_cast:
+            ptr = ffi.cast(cls.ctype, ptr)
+        elif cls.ctype != ffi.typeof(ptr):
             raise TypeError("Expected %s, got %s" % (cls.ctype, ffi.typeof(ptr)))
         self = cls.__new__(cls)
         self._ptr = ptr
