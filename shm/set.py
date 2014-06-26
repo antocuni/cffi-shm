@@ -2,7 +2,7 @@
 Implement a shm set on top of a shm dict
 """
 
-from shm.dict import DictType
+from shm.dict import DictType, cfuffi
 from shm.pyffi import AbstractGenericType
 
 class SetType(AbstractGenericType):
@@ -29,7 +29,7 @@ class SetInstance(object):
         self.d = d
         
     def __repr__(self):
-        addr = int(dictffi.cast('long', self.d.as_cdata()))
+        addr = int(cfuffi.cast('long', self.d.as_cdata()))
         return '<shm set [%s] at 0x%x>' % (self.settype.itemtype,
                                            addr)
     def as_cdata(self):
