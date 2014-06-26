@@ -186,3 +186,9 @@ class DefaultDictInstance(DictInstance):
         value = self.default_factory()
         self[key] = value
         return value
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return default

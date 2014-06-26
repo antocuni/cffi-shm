@@ -205,6 +205,8 @@ def test_defaultdict(pyffi):
     d = DT()
     assert d['hello'] == 42
     assert 'hello' in d
+    assert 'foo' not in d
+    assert d.get('foo') is None
 
 def test_defaultdict_struct_keys(pyffi):
     ffi = pyffi.ffi
