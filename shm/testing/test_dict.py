@@ -67,6 +67,14 @@ def test_keys_values_items(pyffi):
     items = d.items()
     assert sorted(items) == [('bar', 2), ('baz', 3), ('foo', 1)]
 
+def test___iter__(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT()
+    d['foo'] = 1
+    d['bar'] = 2
+    d['baz'] = 3
+    assert sorted(list(d)) == ['bar', 'baz', 'foo']
+
 def test_update(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT()

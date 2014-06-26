@@ -140,6 +140,9 @@ class DictInstance(object):
         for key, value in items:
             self[key] = value
 
+    def __iter__(self):
+        return iter(self.keys())
+
     def keys(self):
         t = self.dictype
         sizeptr = cfuffi.new('size_t[1]')
