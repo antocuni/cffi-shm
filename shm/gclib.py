@@ -110,14 +110,14 @@ def new(ffi, t, root=True):
         raise MemoryError
     res = ffi.cast(ctype, ptr)
     if root:
-        res = roots.add(ffi, res)
+        res = roots.add(ffi, res, ctype)
     return res
 
 def new_array(ffi, t, n, root=True):
     ptr = lib.GC_malloc(ffi.sizeof(t) * n)
     res = ffi.cast("%s[%d]" % (t, n) , ptr)
     if root:
-        res = roots.add(ffi, res)
+        res = roots.add(ffi, res, '%s[]' % t)
     return res
 
 def new_string(s, root=True):
@@ -128,7 +128,7 @@ def new_string(s, root=True):
     lib.strncpy(ptr, s, size)
     ptr = gcffi.cast('char*', ptr)
     if root:
-        ptr = roots.add(gcffi, ptr)
+        ptr = roots.add(gcffi, ptr, '<string>')
     return ptr
 
 def realloc_array(ffi, t, ptr, n):
@@ -151,10 +151,11 @@ class GcRootCollection(object):
         self.n = 0
         self.maxroots = maxroots
         self.mem = gcffi.new('void*[]', self.maxroots)
+        self.extrainfo = [None] * self.maxroots
         size = self.maxroots * gcffi.sizeof('void*')
         lib.GC_root(self.mem, size)
 
-    def _add(self, ptr):
+    def _add(self, ptr, einfo):
         i = self.n
         while True:
             if self.mem[i] == gcffi.NULL:
@@ -164,21 +165,23 @@ class GcRootCollection(object):
                 raise ValueError, 'No more space for GC roots'
 
         self.n = i
-        return GcRoot(self.mem, i, ptr)
+        return GcRoot(self, i, ptr, einfo)
 
-    def add(self, ffi, ptr):
-        root = self._add(ptr)
+    def add(self, ffi, ptr, einfo='<unknown>'):
+        root = self._add(ptr, einfo)
         return ffi.gc(ptr, root.clear)
 
 
 class GcRoot(object):
-    def __init__(self, mem, i, ptr):
-        self.mem = mem
+    def __init__(self, collection, i, ptr, einfo):
+        self.collection = collection
         self.i = i
-        self.mem[i] = ptr
+        self.collection.mem[i] = ptr
+        self.collection.extrainfo[i] = einfo
 
     def clear(self, ptr):
-        self.mem[self.i] = gcffi.NULL
+        self.collection.mem[self.i] = gcffi.NULL
+        self.collection.extrainfo[self.i] = None
 
 roots = GcRootCollection(2048)
 
