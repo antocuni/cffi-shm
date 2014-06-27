@@ -44,6 +44,7 @@ class DictType(AbstractGenericType):
         with sharedmem.gc_disabled:
             ptr = cfuhash.new_with_malloc_fn(sharedmem.get_GC_malloc(),
                                              sharedmem.get_GC_free())
+        cfuhash.set_flag(ptr, cfuhash.NO_LOCKING)
         if self.nocopy:
             cfuhash.set_flag(ptr, cfuhash.NOCOPY_KEYS)
         if self.key_fieldspec:
