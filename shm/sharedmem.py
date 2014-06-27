@@ -38,7 +38,12 @@ class RW_shm(object):
     get_GC_free = gclib.lib.get_GC_free
     roots = gclib.roots
 
+class DummyContextManager(object):
+    def __enter__(self):
+        pass
 
+    def __exit__(self, exc, exctype, tb):
+        pass
 
 class RO_shm(object):
 
@@ -61,7 +66,6 @@ class RO_shm(object):
 
     new_array = _not_implemented
     realloc_array = _not_implemented
-    gc_disabled = property(_not_implemented)
     get_GC_malloc = _not_implemented
     get_GC_free = _not_implemented
     roots = property(_not_implemented)
@@ -84,5 +88,6 @@ class RO_shm(object):
         self.__keepalive.append(ptr)
         return ptr
 
+    gc_disabled = DummyContextManager()
 
 sharedmem = Uninitialized_shm()
