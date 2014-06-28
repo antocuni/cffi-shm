@@ -8,7 +8,7 @@ from shm.testing.test_shm import exec_child
 PATH = '/cffi-shm-testing'
 sharedmem.init(PATH)
 
-def test_lock(tmpdir):
+def test_simple_lock(tmpdir):
     def child(path, lock_addr):
         import time
         from shm.sharedmem import sharedmem
@@ -43,3 +43,28 @@ def test_lock(tmpdir):
     t.start()
     assert exec_child(tmpdir, child, PATH, lock_addr)
     t.join()
+
+
+def test_robust_lock(tmpdir):
+    def child(path, lock_addr):
+        from shm.sharedmem import sharedmem
+        from shm.lock import ShmLock
+        #
+        sharedmem.open_readonly(path)
+        lock = ShmLock.from_pointer(lock_addr)
+        lock.acquire()
+        # note: we do NOT release the lock, but this process dies anyway
+
+    ffi = cffi.FFI()
+    lock = ShmLock()
+    lock_addr = int(ffi.cast('long', lock.as_cdata()))
+    assert exec_child(tmpdir, child, PATH, lock_addr)
+    #
+    # now the child has acquired but not released the lock. We should be able
+    # to acquire it anyway, because we handle EOWNERDEAD
+    lock.acquire()
+    lock.release()
+    #
+    # now, we check that we made the lock consistent again
+    lock.acquire()
+    lock.release()

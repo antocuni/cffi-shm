@@ -35,7 +35,14 @@ class ShmLock(object):
             pthread.checked.mutex_destroy(self.mutex)
 
     def acquire(self):
-        pthread.checked.mutex_lock(self.mutex)
+        ret = pthread.mutex_lock(self.mutex)
+        if ret == pthread.EOWNERDEAD:
+            # the slave process has died. Let's make the mutex consistent
+            # again
+            pthread.mutex_consistent_np(self.mutex)
+            pass
+        else:
+            assert ret == 0
 
     def release(self):
         pthread.checked.mutex_unlock(self.mutex)
