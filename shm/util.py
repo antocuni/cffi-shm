@@ -51,3 +51,36 @@ def _strtype(ctype):
     assert s.startswith("<ctype '")
     _, t, _ = s.split("'")
     return t
+
+
+class CNamespace(object):
+
+    def __init__(self, lib, prefix):
+        self._lib = lib
+        PREFIX = prefix.upper()
+        for key, value in lib.__dict__.iteritems():
+            if key.startswith(prefix) or key.startswith(PREFIX):
+                key = key[len(prefix):]
+                setattr(self, key, value)
+
+
+class Checked(object):
+
+    def __init__(self, lib):
+        self._lib = lib
+        for key, value in lib.__dict__.iteritems():
+            if callable(value):
+                value = self._checked(value)
+            setattr(self, key, value)
+
+    def _checked(self, func):
+        from functools import wraps
+        import errno
+        @wraps(func)
+        def fn(*args, **kwargs):
+            ret = func(*args, **kwargs)
+            if ret != 0:
+                err = errno.errorcode.get(ret, '<ERROR %d>' % ret)
+                raise ValueError(err)
+            return ret
+        return fn

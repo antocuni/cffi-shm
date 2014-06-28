@@ -1,6 +1,7 @@
 import py
 import cffi
 from shm.util import cffi_typeof, cffi_is_struct_ptr, cffi_is_primitive, cffi_is_string
+from shm.util import CNamespace
 from shm.sharedmem import sharedmem
 
 ROOTDIR = py.path.local(__file__).dirpath('..')
@@ -78,16 +79,6 @@ lib = cfuffi.verify(
     #extra_compile_args = ['-g', '-O0'],
 )
 old_cwd.chdir()
-
-class CNamespace(object):
-
-    def __init__(self, lib, prefix):
-        self._lib = lib
-        PREFIX = prefix.upper()
-        for key, value in lib.__dict__.iteritems():
-            if key.startswith(prefix) or key.startswith(PREFIX):
-                key = key[len(prefix):]
-                setattr(self, key, value)
 
 cfuhash = CNamespace(lib, 'cfuhash_')
 
