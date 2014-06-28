@@ -1,0 +1,44 @@
+import time
+import errno
+from shm.pthread import pthread
+from shm.sharedmem import sharedmem
+
+class ShmLock(object):
+
+    def __init__(self):
+        self.mutex = self._new_mutex()
+        self.owning = True
+
+    def _new_mutex(self):
+        attr = pthread.ffi.new('pthread_mutexattr_t*')
+        pthread.checked.mutexattr_init(attr)
+        pthread.checked.mutexattr_setpshared(attr, pthread.PROCESS_SHARED)
+        pthread.checked.mutexattr_setrobust_np(attr, pthread.MUTEX_ROBUST_NP)
+        #
+        mutex = sharedmem.new(pthread.ffi, 'pthread_mutex_t*')
+        pthread.checked.mutex_init(mutex, attr)
+        pthread.checked.mutexattr_destroy(attr)
+        return mutex
+    
+    @classmethod
+    def from_pointer(cls, addr):
+        self = cls.__new__(cls)
+        self.mutex = pthread.ffi.cast('pthread_mutex_t*', addr)
+        self.owning = False
+        return self
+
+    def as_cdata(self):
+        return self.mutex
+
+    def __del__(self):
+        if self.owning:
+            pthread.checked.mutex_destroy(self.mutex)
+
+    def acquire(self):
+        pthread.checked.mutex_lock(self.mutex)
+
+    def release(self):
+        pthread.checked.mutex_unlock(self.mutex)
+        # the sleep is necessary to force to reschedule the process, and give
+        # immediately the other processes a chance to get the mutex
+        time.sleep(0)
