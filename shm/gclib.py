@@ -45,6 +45,19 @@ gcffi.cdef("""
     free_fn get_GC_free(void);
 
     char *strncpy(char *dest, const char *src, size_t n);
+
+    const int PROT_NONE;
+    const int PROT_READ;
+    const int PROT_WRITE;
+    const int PROT_EXEC;
+    int mprotect(void *addr, size_t len, int prot);
+
+    typedef struct {
+        long magic;
+        const char* path;
+        void* rwmem;
+        size_t rwmem_size;
+    } gclib_info_t;
 """)
 
 ## import distutils.log
@@ -60,12 +73,20 @@ GC_path = 'GC'
 lib = gcffi.verify(
     """
     #include <string.h>
+    #include <sys/mman.h>
     #include "gc.h"
 
     typedef void* (*malloc_fn)(size_t);
     typedef void (*free_fn)(void*);
     malloc_fn get_GC_malloc(void) { return GC_malloc_noinline; }
     free_fn   get_GC_free(void)   { return GC_free_noinline; }
+    typedef struct {
+        long magic;
+        const char* path;
+        void* rwmem;
+        size_t rwmem_size;
+    } gclib_info_t;
+
     """,
     include_dirs = ['GC'],
     #extra_compile_args = ['-g', '-O0'],
@@ -85,13 +106,41 @@ def sanity_check():
 
 sanity_check()
 
-
 def init(path):
     if path.count('/') != 1:
         raise OSError('%r should contain exactly one slash' % path)
     ret = lib.GC_init(path)
     if not ret:
         raise OSError('Failed to initialized the shm GC')
+    #
+    init.gc_info = allocate_gc_info(path) # to keep it alive
+
+
+GC_INFO_ADDRESS = 0x1100000000
+GC_INFO_MAGIC = 0x1234ABCDEF
+RW_MEM_SIZE = 1024*1024 # 1 MB
+#
+def allocate_gc_info(path):
+    gc_info = new(gcffi, 'gclib_info_t*')
+    gc_info_addr = gcffi.cast('long', gc_info)
+    if int(gc_info_addr) != GC_INFO_ADDRESS:
+        # if this happens, it probably means that the size of gc_struct has
+        # changed and the GC allocates it in a new bucket. Simply change the
+        # value of GC_INFO_ADDRESS accordingly
+        raise ValueError("The gc_info struct was supposed to be allocated "
+                         "at the addres 0x%x" % GC_INFO_ADDRESS)
+    gc_info.magic = GC_INFO_MAGIC
+    gc_info.path = new_string(path, root=False)
+    #
+    # allocate a RW area
+    gc_info.rwmem = lib.GC_malloc(RW_MEM_SIZE)
+    gc_info.rwmem_size = RW_MEM_SIZE
+    rw_allocator.init(gc_info.rwmem, gc_info.rwmem_size)
+    return gc_info
+
+def get_gc_info():
+    return gcffi.cast('gclib_info_t*', GC_INFO_ADDRESS)
+
 
 def open_readonly(path):
     if path.count('/') != 1:
@@ -99,13 +148,27 @@ def open_readonly(path):
     ret = lib.GC_open(path)
     if not ret:
         raise OSError('Failed to open the shm GC')
+    #
+    # now, we need to enable writing to the RW part of the memory
+    gc_info = get_gc_info()
+    if gc_info.magic != GC_INFO_MAGIC:
+        raise ValueError("The gc_info global does not seem to be at the address 0x%x, "
+                         "or it has been corrupted" % GC_INFO_ADDRESS)
+    ret = lib.mprotect(gc_info.rwmem, gc_info.rwmem_size, lib.PROT_READ | lib.PROT_WRITE)
+    if ret != 0:
+        raise OSError("mprotect failed: error code: %d" % ret)
 
+def _malloc(size, rw):
+    if rw:
+        return rw_allocator.malloc(size)
+    else:
+        return lib.GC_malloc(size)
 
-def new(ffi, t, root=True):
+def new(ffi, t, root=True, rw=False):
     ctype = cffi_typeof(ffi, t)
     if ctype.kind != 'pointer':
         raise TypeError("Expected a pointer, got '%s'" % t)
-    ptr = lib.GC_malloc(ffi.sizeof(ctype.item))
+    ptr = _malloc(ffi.sizeof(ctype.item), rw)
     if ptr == ffi.NULL:
         raise MemoryError
     res = ffi.cast(ctype, ptr)
@@ -113,8 +176,8 @@ def new(ffi, t, root=True):
         res = roots.add(ffi, res, ctype)
     return res
 
-def new_array(ffi, t, n, root=True):
-    ptr = lib.GC_malloc(ffi.sizeof(t) * n)
+def new_array(ffi, t, n, root=True, rw=False):
+    ptr = _malloc(ffi.sizeof(t) * n, rw)
     res = ffi.cast("%s[%d]" % (t, n) , ptr)
     if root:
         res = roots.add(ffi, res, '%s[]' % t)
@@ -194,3 +257,33 @@ class Disabled(object):
         enable()
 
 disabled = Disabled()
+
+class DummyAllocator(object):
+    """
+    Very dummy allocator to manage the Read-Write memory.
+
+    It simply bumps a pointer until we finish the space. The allocated memory
+    is never freed. It is not a problem because RW memory should be used very
+    carefully, ideally only for pthread_mutexes, and you should not need many
+    of them.
+
+    If you need more space, you can simply augment RW_MEM_SIZE.
+    """
+    
+    def __init__(self):
+        self.start_mem = None
+
+    def init(self, mem, size):
+        self.start_mem = mem
+        self.end_mem = mem+size
+        self.last_mem = mem
+
+    def malloc(self, size):
+        assert self.start_mem is not None
+        mem = self.last_mem
+        if mem+size > self.end_mem:
+            return gcffi.NULL
+        self.last_mem += size
+        return mem
+        
+rw_allocator = DummyAllocator()

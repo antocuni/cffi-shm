@@ -16,6 +16,13 @@ def test_gc_memory():
     assert gclib.lib.GC_get_memory() == ffi.cast('void*', 0x1000000000)
     assert gclib.lib.GC_get_memsize() == 4*gb * 768
 
+def test_gclib_info():
+    info = gclib.get_gc_info()
+    assert info.magic == gclib.GC_INFO_MAGIC
+    path = gclib.gcffi.string(info.path)
+    assert path == '/cffi-shm-testing'
+
+
 def test_new():
     gclib.collect()
     p1 = gclib.new(ffi, 'Point*', root=False)
@@ -132,3 +139,13 @@ def test_root_size(monkeypatch):
     gclib.collect()
     p4 = gclib.new(ffi, 'Point*')
     assert p4 not in (p1, p2, p3)
+
+def test_DummyAllocator():
+    mem = ffi.cast('void*', 1000)
+    alloc = gclib.DummyAllocator()
+    alloc.init(mem, 100)
+    assert alloc.malloc(10) == ffi.cast('void*', 1000)
+    assert alloc.malloc(20) == ffi.cast('void*', 1010)
+    assert alloc.malloc(80) == ffi.NULL
+    assert alloc.malloc(70) == ffi.cast('void*', 1030)
+    assert alloc.malloc(1) == ffi.NULL
