@@ -210,11 +210,41 @@ static void *gc_get_stackbottom(void)
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <signal.h>
+
+static struct sigaction old_sigsev_handler;
+
+static void sigsev_handler(int signum, siginfo_t *si, void *unused) {
+    void* addr = si->si_addr;
+    void* start = GC_MEMORY;
+    void* end = GC_MEMORY + GC_get_memsize();
+
+    if (addr >= start && addr <= end)
+        fprintf(stderr, "FATAL: detected write to read-only shared memory address: 0x%lx\n",
+            (long) si->si_addr);
+    
+    /* restore and call the previous handler */
+    sigaction(signum, &old_sigsev_handler, NULL);
+    raise(signum);
+}
+
+static void install_sigsegv_handler() {
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO | SA_NODEFER;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = sigsev_handler;
+    int ret = sigaction(SIGSEGV, &sa, &old_sigsev_handler);
+    if (ret != 0) {
+        perror("Cannot install signal handler");
+        exit(EXIT_FAILURE);
+    }
+}
 
 static void *gc_get_memory(const char* path, bool init)
 {
     int flags;
     int fd;
+    int prot;
     size_t memsize = GC_get_memsize();
 
     if (path == NULL) {
@@ -247,8 +277,17 @@ static void *gc_get_memory(const char* path, bool init)
         }
     }
 
-    void *ptr = mmap(GC_MEMORY, memsize, PROT_READ | PROT_WRITE, flags, fd, 0);
-    return (ptr == MAP_FAILED? NULL: ptr);
+    prot = PROT_READ;
+    if (init)
+        prot |= PROT_WRITE;
+    void *ptr = mmap(GC_MEMORY, memsize, prot, flags, fd, 0);
+    if (ptr == MAP_FAILED)
+        return NULL;
+
+    if (!init)
+        install_sigsegv_handler(GC_MEMORY, memsize);
+
+    return ptr;
 }
 static void *gc_get_mark_memory(size_t size)
 {
