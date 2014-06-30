@@ -113,7 +113,9 @@ def init(path):
     if not ret:
         raise OSError('Failed to initialized the shm GC')
     #
-    init.gc_info = allocate_gc_info(path) # to keep it alive
+    if init.gc_info is None:
+        init.gc_info = allocate_gc_info(path) # to keep it alive
+init.gc_info = None
 
 
 GC_INFO_ADDRESS = 0x1100000000

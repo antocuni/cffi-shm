@@ -53,17 +53,17 @@ def test_new_string():
     assert ptr[5] == '\0'
     assert ffi.string(ptr) == 'hello'
 
-def allocate_many(n=10000):
+def allocate_many(n=1024):
     a = gclib.total_collections()
     for i in range(n):
-        p = gclib.new(ffi, 'Point*', root=False)
+        p = gclib.new_array(ffi, 'Point', 1024, root=False)
     b = gclib.total_collections()
     return a, b
     
 def test_gc_enabled():
     # we check that with the GC enabled, after a while it collects and we
-    # start allocating at lower addresses (remember that by default the result
-    # of new() is not a root)
+    # start allocating at lower addresses
+    gclib.collect()
     a, b = allocate_many()
     assert b > a
 
