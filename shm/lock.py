@@ -15,7 +15,7 @@ class ShmLock(object):
         pthread.checked.mutexattr_setpshared(attr, pthread.PROCESS_SHARED)
         pthread.checked.mutexattr_setrobust_np(attr, pthread.MUTEX_ROBUST_NP)
         #
-        mutex = sharedmem.new(pthread.ffi, 'pthread_mutex_t*')
+        mutex = sharedmem.new(pthread.ffi, 'pthread_mutex_t*', rw=True)
         pthread.checked.mutex_init(mutex, attr)
         pthread.checked.mutexattr_destroy(attr)
         return mutex
