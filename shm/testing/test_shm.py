@@ -56,6 +56,25 @@ def test_sharedmem(tmpdir):
     assert exec_child(tmpdir, child, PATH, str_addr)
 
 
+def test_readonly_mem(tmpdir):
+    def child(path, x_addr, should_segfault):
+        import cffi
+        from shm.sharedmem import sharedmem
+        #
+        ffi = cffi.FFI()
+        sharedmem.open_readonly(path)
+        x = ffi.cast('long*', x_addr)
+        assert x[0] == 42
+        if should_segfault:
+            x[0] = 100 # BOOM
+
+    ffi = cffi.FFI()
+    x = sharedmem.new_array(ffi, 'long', 1)
+    x[0] = 42
+    x_addr = int(ffi.cast('long', x))
+    assert exec_child(tmpdir, child, PATH, x_addr, False)
+    py.test.raises(ValueError, "exec_child(tmpdir, child, PATH, x_addr, True)")
+
 def test_list(tmpdir):
     def child(path, list_addr):
         import cffi
