@@ -228,7 +228,7 @@ static void sigsev_handler(int signum, siginfo_t *si, void *unused) {
     raise(signum);
 }
 
-static void install_sigsegv_handler() {
+static void install_sigsegv_handler(void) {
     struct sigaction sa;
     sa.sa_flags = SA_SIGINFO | SA_NODEFER;
     sigemptyset(&sa.sa_mask);
@@ -285,7 +285,7 @@ static void *gc_get_memory(const char* path, bool init)
         return NULL;
 
     if (!init)
-        install_sigsegv_handler(GC_MEMORY, memsize);
+        install_sigsegv_handler();
 
     return ptr;
 }
