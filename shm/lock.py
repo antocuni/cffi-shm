@@ -50,3 +50,9 @@ class ShmLock(object):
         # the sleep is necessary to force to reschedule the process, and give
         # immediately the other processes a chance to get the mutex
         time.sleep(0)
+
+    def __enter__(self):
+        self.acquire()
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.release()
