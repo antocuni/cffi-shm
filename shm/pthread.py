@@ -7,6 +7,7 @@ ffi.cdef("""
     const int PTHREAD_PROCESS_SHARED;
     const int PTHREAD_MUTEX_STALLED_NP;
     const int PTHREAD_MUTEX_ROBUST_NP;
+    const int PTHREAD_MUTEX_RECURSIVE;
     const int EOWNERDEAD;
 
     typedef struct { ...; } pthread_mutex_t;
@@ -22,6 +23,7 @@ ffi.cdef("""
     int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
     int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
     int pthread_mutexattr_setrobust_np(pthread_mutexattr_t *attr, int robust);
+    int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
 
     int pthread_mutex_consistent_np(pthread_mutex_t *mutex);
 """)

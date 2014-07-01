@@ -68,3 +68,12 @@ def test_robust_lock(tmpdir):
     # now, we check that we made the lock consistent again
     lock.acquire()
     lock.release()
+
+
+def test_recursive_lock():
+    lock = ShmLock()
+    lock.acquire()
+    lock.acquire()
+    lock.release()
+    lock.release()
+    
