@@ -149,3 +149,4 @@ def test_DummyAllocator():
     assert alloc.malloc(80) == ffi.NULL
     assert alloc.malloc(70) == ffi.cast('void*', 1030)
     assert alloc.malloc(1) == ffi.NULL
+

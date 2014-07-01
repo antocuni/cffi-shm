@@ -108,6 +108,43 @@ def test_readwrite_mem(tmpdir):
     assert x[0] == 100
 
 
+def test_gclib_protect(tmpdir):
+    def child(should_crash):
+        import cffi
+        from shm.sharedmem import sharedmem
+        from shm import gclib
+        #
+        ffi = cffi.FFI()
+        sharedmem.init('/cffi-shm-testing-2')
+        x = sharedmem.new_array(ffi, 'long', 1)
+        x[0] = 42
+        gclib.protect()
+        if should_crash:
+            x[0] = 100
+
+    assert exec_child(tmpdir, child, False)
+    py.test.raises(ValueError, "exec_child(tmpdir, child, True)")
+
+
+def test_gclib_unprotect(tmpdir):
+    def child(should_crash):
+        import cffi
+        from shm.sharedmem import sharedmem
+        from shm import gclib
+        #
+        ffi = cffi.FFI()
+        sharedmem.init('/cffi-shm-testing-2')
+        x = sharedmem.new_array(ffi, 'long', 1)
+        x[0] = 42
+        gclib.protect()
+        if not should_crash:
+            gclib.unprotect()
+        x[0] = 100
+
+    assert exec_child(tmpdir, child, False)
+    py.test.raises(ValueError, "exec_child(tmpdir, child, True)")
+
+
 def test_list(tmpdir):
     def child(path, list_addr):
         import cffi

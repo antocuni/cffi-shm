@@ -289,3 +289,20 @@ class DummyAllocator(object):
         return mem
         
 rw_allocator = DummyAllocator()
+
+def protect():
+    """
+    For debugging purpose. Temporarily mark the GC memory as read-only, to get
+    a segfault in case anyone tries to write when it's not supposed to.
+    """
+    mem = lib.GC_get_memory()
+    size = lib.GC_get_memsize()
+    ret = lib.mprotect(mem, size, lib.PROT_READ)
+
+def unprotect():
+    """
+    For debugging purpose. Undo the effect of protect()
+    """
+    mem = lib.GC_get_memory()
+    size = lib.GC_get_memsize()
+    ret = lib.mprotect(mem, size, lib.PROT_READ | lib.PROT_WRITE)
