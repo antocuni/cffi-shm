@@ -38,6 +38,20 @@ class RW_shm(object):
     get_GC_free = gclib.lib.get_GC_free
     roots = gclib.roots
 
+    def protect(self):
+        """
+        Protect the shared memory against writing. It is still possible to
+        read it.
+        """
+        gclib.protect_GC_memory(gclib.lib.PROT_READ)
+
+    def unprotect(self):
+        """
+        Undo the effect of protect. The GC memory is turned Read/Write again.
+        """
+        gclib.protect_GC_memory(gclib.lib.PROT_READ | gclib.lib.PROT_WRITE)
+
+
 class DummyContextManager(object):
     def __enter__(self):
         pass

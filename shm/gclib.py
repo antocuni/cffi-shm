@@ -151,14 +151,37 @@ def open_readonly(path):
     if not ret:
         raise OSError('Failed to open the shm GC')
     #
-    # now, we need to enable writing to the RW part of the memory
+    # sanity check
     gc_info = get_gc_info()
     if gc_info.magic != GC_INFO_MAGIC:
         raise ValueError("The gc_info global does not seem to be at the address 0x%x, "
                          "or it has been corrupted" % GC_INFO_ADDRESS)
-    ret = lib.mprotect(gc_info.rwmem, gc_info.rwmem_size, lib.PROT_READ | lib.PROT_WRITE)
+    #
+    # now, we need to enable writing to the RW part of the memory
+    protect_GC_memory(lib.PROT_READ)
+
+
+def protect_GC_memory(prot):
+    """
+    Protect the GC memory with the desired level of permission. This is useful
+    to temporarily protect the memory against writing or reading, in case you
+    need a lock to get access to it.
+
+    Note that the RW area is not affected by this: it needs to always remain
+    both readable and writable, because this is were mutexes reside.
+    """
+    mem = lib.GC_get_memory()
+    size = lib.GC_get_memsize()
+    _mprotect(mem, size, prot)
+    # the rw memory cannot be protected, because it's where we allocate the mutex
+    gc_info = get_gc_info()
+    _mprotect(gc_info.rwmem, gc_info.rwmem_size, lib.PROT_READ | lib.PROT_WRITE)
+
+def _mprotect(mem, size, prot):
+    ret = lib.mprotect(mem, size, prot)
     if ret != 0:
         raise OSError("mprotect failed: error code: %d" % ret)
+    return ret
 
 def _malloc(size, rw):
     if rw:
@@ -289,20 +312,3 @@ class DummyAllocator(object):
         return mem
         
 rw_allocator = DummyAllocator()
-
-def protect():
-    """
-    For debugging purpose. Temporarily mark the GC memory as read-only, to get
-    a segfault in case anyone tries to write when it's not supposed to.
-    """
-    mem = lib.GC_get_memory()
-    size = lib.GC_get_memsize()
-    ret = lib.mprotect(mem, size, lib.PROT_READ)
-
-def unprotect():
-    """
-    For debugging purpose. Undo the effect of protect()
-    """
-    mem = lib.GC_get_memory()
-    size = lib.GC_get_memsize()
-    ret = lib.mprotect(mem, size, lib.PROT_READ | lib.PROT_WRITE)
