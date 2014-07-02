@@ -170,12 +170,25 @@ def protect_GC_memory(prot):
     Note that the RW area is not affected by this: it needs to always remain
     both readable and writable, because this is were mutexes reside.
     """
+    gc_info = get_gc_info()
+    if prot == lib.PROT_NONE:
+        # if we are going to set PROT_NONE, we need to read the rwmem pointer
+        # BEFORE, else we segfault
+        rwmem = gc_info.rwmem
+        rwmem_size = gc_info.rwmem_size
+    #
+    # protect the whole GC memory
     mem = lib.GC_get_memory()
     size = lib.GC_get_memsize()
     _mprotect(mem, size, prot)
-    # the rw memory cannot be protected, because it's where we allocate the mutex
-    gc_info = get_gc_info()
-    _mprotect(gc_info.rwmem, gc_info.rwmem_size, lib.PROT_READ | lib.PROT_WRITE)
+    #
+    if prot != lib.PROT_NONE:
+        # if we set at least PROT_READ, we can now safely read the rwmem pointer
+        rwmem = gc_info.rwmem
+        rwmem_size = gc_info.rwmem_size
+    # protect the RW memory
+    _mprotect(rwmem, rwmem_size, lib.PROT_READ | lib.PROT_WRITE)
+
 
 def _mprotect(mem, size, prot):
     ret = lib.mprotect(mem, size, prot)

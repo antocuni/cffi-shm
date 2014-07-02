@@ -104,4 +104,17 @@ class RO_shm(object):
 
     gc_disabled = DummyContextManager()
 
+    def protect(self):
+        """
+        Protect the shared memory against reading or writing.
+        """
+        gclib.protect_GC_memory(gclib.lib.PROT_NONE)
+
+    def unprotect(self):
+        """
+        Undo the effect of protect. The GC memory is turned Read-only again.
+        """
+        gclib.protect_GC_memory(gclib.lib.PROT_READ)
+
+
 sharedmem = Uninitialized_shm()

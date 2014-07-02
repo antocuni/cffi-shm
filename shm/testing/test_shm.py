@@ -142,6 +142,27 @@ def test_RW_sharedmem_unprotect(tmpdir):
     assert exec_child(tmpdir, child, False)
     py.test.raises(ValueError, "exec_child(tmpdir, child, True)")
 
+def test_RO_sharedmem_protect_unprotect(tmpdir):
+    def child(path, x_addr, should_segfault):
+        import cffi
+        from shm.sharedmem import sharedmem
+        #
+        ffi = cffi.FFI()
+        sharedmem.open_readonly(path)
+        x = ffi.cast('long*', x_addr)
+        sharedmem.protect()
+        if should_segfault:
+            assert x[0] == 42
+        sharedmem.unprotect()
+        assert x[0] == 42
+
+    ffi = cffi.FFI()
+    x = sharedmem.new_array(ffi, 'long', 1)
+    x[0] = 42
+    x_addr = int(ffi.cast('long', x))
+    assert exec_child(tmpdir, child, PATH, x_addr, False)
+    py.test.raises(ValueError, "exec_child(tmpdir, child, PATH, x_addr, True)")
+
 
 def test_list(tmpdir):
     def child(path, list_addr):
