@@ -220,8 +220,8 @@ static void sigsev_handler(int signum, siginfo_t *si, void *unused) {
     void* end = GC_MEMORY + GC_get_memsize();
 
     if (addr >= start && addr <= end)
-        fprintf(stderr, "FATAL: detected write to read-only shared memory address: 0x%lx\n",
-            (long) si->si_addr);
+        fprintf(stderr, "FATAL: detected invalid access to shared memory address: 0x%lx\n",
+                (long) si->si_addr);
     
     /* restore and call the previous handler */
     sigaction(signum, &old_sigsev_handler, NULL);
