@@ -92,6 +92,17 @@ def test_update(pyffi):
     keys = d.keys()
     assert sorted(keys) == ['bar', 'baz', 'foo']
 
+def test_pop(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT()
+    d['foo'] = 1
+    d['bar'] = 2
+    assert d.pop('foo') == 1
+    assert 'foo' not in d
+    py.test.raises(KeyError, "d.pop('foo')")
+    assert d.pop('foo', 42) == 42
+
+
 def test_ctor(pyffi):
     DT = DictType(pyffi, 'const char*', 'long')
     d = DT({'bar': 1, 'baz': 2, 'foo': 3})
@@ -231,3 +242,11 @@ def test_defaultdict_struct_keys(pyffi):
     d = DT()
     p = Point(1, 2)
     assert d[p] == 42
+
+def test_defaultdict_pop(pyffi):
+    DT = pyffi.defaultdict('const char*', 'long', lambda: 42)
+    d = DT()
+    py.test.raises(KeyError, "d.pop('hello')")
+    assert d['hello'] == 42
+    d.pop('hello') == 42
+    py.test.raises(KeyError, "d.pop('hello')")

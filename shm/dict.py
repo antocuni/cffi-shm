@@ -73,7 +73,7 @@ class DictType(AbstractGenericType):
 
 
 
-
+SENTINEL = object()
 
 class DictInstance(object):
 
@@ -97,16 +97,25 @@ class DictInstance(object):
     def __len__(self):
         return cfuhash.num_entries(self.ht)
 
-    def __getitem__(self, ckey):
+    def _getitem(self, ckey, honor___missing__=False):
+        # the different between __getitem__ and _getitem is that the first
+        # calls __missing__ when the key is not found, which triggers a
+        # different behaviour in defaultdicts
         t = self.dictype
         key = self._key(ckey)
         ret = cfuhash.get_data(self.ht, key, t.keysize,
                                    self.retbuffer, cfuffi.NULL)
         if ret == 0:
-            return self.__missing__(ckey)
+            if honor___missing__:
+                return self.__missing__(ckey)
+            else:
+                raise KeyError(ckey)
         value = self.retbuffer[0]
         value = t.ffi.cast(t.valuetype, value)
         return t.valueconverter.to_python(value)
+
+    def __getitem__(self, ckey):
+        return self._getitem(ckey, honor___missing__=True)
 
     def __missing__(self, key):
         raise KeyError(key)
@@ -132,9 +141,20 @@ class DictInstance(object):
 
     def get(self, key, default=None):
         try:
-            return self[key]
+            return self._getitem(key)
         except KeyError:
             return default
+
+    def pop(self, key, default=SENTINEL):
+        try:
+            ret = self._getitem(key)
+        except KeyError:
+            if default is SENTINEL:
+                raise
+            ret = default
+        else:
+            del self[key]
+        return ret
 
     def update(self, d):
         if hasattr(d, 'keys'):
@@ -190,9 +210,3 @@ class DefaultDictInstance(DictInstance):
         value = self.default_factory()
         self[key] = value
         return value
-
-    def get(self, key, default=None):
-        if key in self:
-            return self[key]
-        else:
-            return default
