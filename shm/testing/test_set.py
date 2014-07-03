@@ -43,3 +43,11 @@ def test_discard(pyffi):
     assert list(s) == ["bar"]
     #
     s.discard("foo") # check it does not raise
+
+def test_len(pyffi):
+    ST = pyffi.set('const char*')
+    s = ST()
+    assert len(s) == 0
+    s.add("foo")
+    s.add("bar")
+    assert len(s) == 2

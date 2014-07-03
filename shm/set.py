@@ -52,3 +52,6 @@ class SetInstance(object):
 
     def __iter__(self):
         return iter(self.d.keys())
+
+    def __len__(self):
+        return len(self.d)

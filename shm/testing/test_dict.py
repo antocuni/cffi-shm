@@ -21,6 +21,15 @@ def test_getsetitem(pyffi):
     d['hello'] = 42
     assert d['hello'] == 42
 
+def test_len(pyffi):
+    DT = DictType(pyffi, 'const char*', 'long')
+    d = DT()
+    assert len(d) == 0
+    d['hello'] = 42
+    assert len(d) == 1
+    d['world'] = 43
+    assert len(d) == 2
+
 def test_strvalue(pyffi):
     DT = DictType(pyffi, 'const char*', 'const char*')
     d = DT()

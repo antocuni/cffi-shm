@@ -94,6 +94,9 @@ class DictInstance(object):
     def _key(self, key):
         return self.dictype.keyconverter.from_python(key, ensure_shm=False, as_voidp=True)
 
+    def __len__(self):
+        return cfuhash.num_entries(self.ht)
+
     def __getitem__(self, ckey):
         t = self.dictype
         key = self._key(ckey)

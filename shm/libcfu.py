@@ -31,6 +31,7 @@ cfuffi.cdef("""
 	                 size_t data_size, void **r);
     int cfuhash_exists_data(cfuhash_table_t *ht, const void *key, size_t key_size);
     void * cfuhash_delete_data(cfuhash_table_t *ht, const void *key, size_t key_size);
+    size_t cfuhash_num_entries(cfuhash_table_t *ht);
     void **cfuhash_keys(cfuhash_table_t *ht, size_t *num_keys, int fast);
 
     int cfuhash_set_hash_function(cfuhash_table_t *ht, cfuhash_function_t hf);
