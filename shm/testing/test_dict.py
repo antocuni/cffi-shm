@@ -129,6 +129,14 @@ def test_long_key(pyffi):
     assert d[10] == 20
     assert d[20] == 40
 
+def test_double_key_values(pyffi):
+    DT = DictType(pyffi, 'long', 'double')
+    d = DT()
+    d[10.1] = 20.3
+    d[20.2] = 40.5
+    assert d[10.1] == 20.3
+    assert d[20.2] == 40.5
+
 def test_key_struct_byval(pyffi):
     # first: we use struct by value as keys, easy case
     ffi = pyffi.ffi

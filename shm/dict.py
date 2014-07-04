@@ -92,7 +92,8 @@ class DictInstance(object):
         return self.ht
 
     def _key(self, key):
-        return self.dictype.keyconverter.from_python(key, ensure_shm=False, as_voidp=True)
+        key = self.dictype.keyconverter.from_python(key, ensure_shm=False)
+        return self.dictype.keyconverter.to_voidp(key)
 
     def __len__(self):
         return cfuhash.num_entries(self.ht)
@@ -110,8 +111,8 @@ class DictInstance(object):
                 return self.__missing__(ckey)
             else:
                 raise KeyError(ckey)
-        value = self.retbuffer[0]
-        value = t.ffi.cast(t.valuetype, value)
+        ptr = self.retbuffer[0]
+        value = t.valueconverter.from_voidp(ptr)
         return t.valueconverter.to_python(value)
 
     def __getitem__(self, ckey):
@@ -124,7 +125,7 @@ class DictInstance(object):
         t = self.dictype
         key = self._key(key)
         value = t.valueconverter.from_python(value)
-        value = t.ffi.cast('void*', value)
+        value = t.valueconverter.to_voidp(value)
         cfuhash.put_data(self.ht, key, t.keysize, value, 0, cfuffi.NULL)
 
     def __contains__(self, key):

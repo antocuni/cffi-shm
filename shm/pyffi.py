@@ -1,7 +1,7 @@
 from shm.struct import make_struct
 from shm import converter
 from shm.util import (cffi_typeof, cffi_is_struct_ptr, cffi_is_string,
-                      cffi_is_char_array, compile_def, identity)
+                      cffi_is_char_array, cffi_is_double, compile_def, identity)
 
 class AbstractGenericType(object):
     __immutable__ = False
@@ -121,6 +121,8 @@ class PyFFI(object):
             return converter.String(self.ffi, ctype)
         elif cffi_is_char_array(self.ffi, ctype):
             return converter.ArrayOfChar(self.ffi, ctype)
+        elif cffi_is_double(self.ffi, ctype):
+            return converter.Double(self.ffi, ctype)
         elif ctype.kind == 'primitive':
             return converter.Primitive(self.ffi, ctype)
         else:

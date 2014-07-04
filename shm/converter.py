@@ -4,7 +4,7 @@ import datetime
 from collections import defaultdict
 import cffi
 from shm.sharedmem import sharedmem
-from shm.util import ctype_pointer_to, ctype_array_of
+from shm.util import ctype_pointer_to, ctype_array_of, cffi_is_double
 
 class AbstractConverter(object):
     def __init__(self, ffi, ctype):
@@ -27,7 +27,7 @@ class AbstractConverter(object):
     def to_python_impl(self, cdata):
         raise NotImplementedError
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         """
         Convert the given Python object into something which can be
         passed/stored as cdata. This includes the types which cffi handles
@@ -41,27 +41,21 @@ class AbstractConverter(object):
         only immediately, and only in address space of the current
         process. E.g., it is useful for doing dictionary lookups in slave
         processes, where you cannot call GC_malloc.
-
-        If as_voidp==True, return something which can be passed to a function
-        expecting a void*. E.g., for primitive types a cast to void* is
-        necessary, but e.g. for strings it is done automatically (and moreover
-        strings cannot be explicitly casted to void*). Note that for all
-        converters which already returns a pointer, the cast is not necessary
-        as pointers are always convertible to void* anyway.
         """
         raise NotImplementedError
 
-    def _as_voidp_maybe(self, obj, as_voidp):
-        if as_voidp:
-            return self.ffi.cast('void*', obj)
-        return obj
+    def to_voidp(self, obj):
+        return self.ffi.cast('void*', obj)
+
+    def from_voidp(self, ptr):
+        return self.ffi.cast(self.ctype, ptr)
 
 
 class Dummy(AbstractConverter):
     def to_python(self, cdata):
         return cdata
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         return obj
 
 
@@ -75,7 +69,7 @@ class StructPtr(AbstractConverter):
             return None
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             return self.ffi.NULL
         return obj.as_cdata()
@@ -92,7 +86,7 @@ class StructByVal(AbstractConverter):
             cdata = self.ffi.cast(ctype_ptr, cdata)
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         return obj.as_cdata()
 
 
@@ -106,7 +100,7 @@ class GenericTypePtr(AbstractConverter):
             return None
         return self.class_.from_pointer(cdata)
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             return self.ffi.NULL
         # obj.as_cdata returns the concrete type (e.g. List* from listffi),
@@ -120,13 +114,17 @@ class String(AbstractConverter):
             return None
         return self.ffi.string(cdata)
 
-    def from_python(self, s, ensure_shm=True, as_voidp=False):
+    def from_python(self, s, ensure_shm=True):
         if s is None:
             return self.ffi.NULL
         if ensure_shm:
             return sharedmem.new_string(s)
         else:
             return s
+
+    def to_voidp(self, obj):
+        return obj # XXX
+
 
 class ArrayOfChar(AbstractConverter):
     """
@@ -136,7 +134,7 @@ class ArrayOfChar(AbstractConverter):
     def to_python_impl(self, cdata):
         return self.ffi.string(cdata)
 
-    def from_python(self, s, ensure_shm=True, as_voidp=False):
+    def from_python(self, s, ensure_shm=True):
         return s
 
 class Primitive(AbstractConverter):
@@ -157,8 +155,31 @@ class Primitive(AbstractConverter):
         self.buf[0] = cdata
         return self.buf[0]
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
-        return self._as_voidp_maybe(obj, as_voidp)
+    def from_python(self, obj, ensure_shm=True):
+        return obj
+
+class Double(Primitive):
+
+    myffi = cffi.FFI()
+    myffi.cdef("""
+        union double_voidp {
+            double d;
+            void* p;
+        };
+    """)
+
+    def __init__(self, ffi, ctype):
+        assert cffi_is_double(ffi, ctype)
+        Primitive.__init__(self, ffi, ctype)
+        self.union = self.myffi.new('union double_voidp*')
+
+    def to_voidp(self, cdata):
+        self.union.d = cdata
+        return self.union.p
+
+    def from_voidp(self, ptr):
+        self.union.p = ptr
+        return self.union.d
 
 class DoubleOrNone(AbstractConverter):
     """
@@ -175,10 +196,10 @@ class DoubleOrNone(AbstractConverter):
             return None
         return value
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             obj = float('NaN')
-        return self._as_voidp_maybe(obj, as_voidp)
+        return obj
 
 class LongOrNone(AbstractConverter):
     """
@@ -197,10 +218,10 @@ class LongOrNone(AbstractConverter):
             return None
         return value
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             obj = self.sentinel
-        return self._as_voidp_maybe(obj, as_voidp)
+        return obj
 
 
 class DateTimeConverter(AbstractConverter):
@@ -215,12 +236,12 @@ class DateTimeConverter(AbstractConverter):
             return None
         return self.type.fromtimestamp(value)
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             value = float('NaN')
         else:
             value = time.mktime(obj.timetuple())
-        return self._as_voidp_maybe(value, as_voidp)
+        return value
 
 
 class DateConverter(DateTimeConverter):
@@ -246,9 +267,10 @@ class TimeConverter(AbstractConverter):
         hh, mm = divmod(hhmm, 60)
         return datetime.time(hh, mm, ss)
 
-    def from_python(self, obj, ensure_shm=True, as_voidp=False):
+    def from_python(self, obj, ensure_shm=True):
         if obj is None:
             value = self.sentinel
         else:
             value = obj.hour*3600 + obj.minute*60 + obj.second
-        return self._as_voidp_maybe(value, as_voidp)
+        return value
+
