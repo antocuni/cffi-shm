@@ -51,3 +51,9 @@ def test_len(pyffi):
     s.add("foo")
     s.add("bar")
     assert len(s) == 2
+
+def test_init(pyffi):
+    ST = pyffi.set('const char*')
+    s = ST(['foo', 'bar'])
+    assert len(s) == 2
+    assert sorted(list(s)) == ['bar', 'foo']
