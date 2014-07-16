@@ -14,9 +14,13 @@ class SetType(AbstractGenericType):
     def __repr__(self):
         return '<shm type set [%s]>' % self.itemtype
 
-    def __call__(self, root=True):
+    def __call__(self, init=None, root=True):
         d = self.DT(root=root)
-        return SetInstance(self, d)
+        s = SetInstance(self, d)
+        if init is not None:
+            for item in init:
+                s.add(item)
+        return s
 
     def from_pointer(self, ptr):
         d = self.DT.from_pointer(ptr)
