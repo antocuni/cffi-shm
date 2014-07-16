@@ -127,6 +127,9 @@ class ImmutableList(object):
         return self.lst.length
 
     def __getitem__(self, i):
+        if isinstance(i, slice):
+            idx = xrange(*i.indices(len(self)))
+            return [self._getitem(j) for j in idx]
         i = self._getindex(i)
         return self._getitem(i)
 
