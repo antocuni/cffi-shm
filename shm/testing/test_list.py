@@ -62,6 +62,14 @@ def test_getitem(pyffi):
     assert l[-1] == 4
     py.test.raises(IndexError, "l[5]")
     py.test.raises(IndexError, "l[-6]")
+
+def test_getitem_slice(pyffi):
+    LT = ListType(pyffi, 'long')
+    l = LT(range(5))
+    assert l[2:4] == [2, 3]
+    assert l[:3] == [0, 1, 2]
+    assert l[3:] == [3, 4]
+    assert l[:] == [0, 1, 2, 3, 4]
     
 def test_setitem(pyffi):
     LT = ListType(pyffi, 'long')
