@@ -81,7 +81,7 @@ class StructDecorator(object):
             line = 'self.__set_{x}({x})'.format(x=fieldname)
             bodylines.append(line)
         body = py.code.Source(bodylines)
-        _init = body.putaround('def _init(self, %s):' % paramlist)
+        _init = body.putaround('def _init(self, %s, sharedmem=sharedmem):' % paramlist)
         cls._init = compile_def(_init, sharedmem=sharedmem)
         #
         # we add the proper __init__ only if it's not already defined
@@ -148,7 +148,7 @@ class StructDecorator(object):
     def getter(self, cls, fieldname, field):
         conv = self.get_converter(fieldname, field)
         src = py.code.Source("""
-            def __get_{x}(self):
+            def __get_{x}(self, conv=conv):
                 return conv.to_python(self._ptr.{x})
         """.format(x=fieldname))
         fn = compile_def(src, conv=conv)
@@ -158,10 +158,9 @@ class StructDecorator(object):
     def setter(self, cls, fieldname, field):
         conv = self.get_converter(fieldname, field)
         src = py.code.Source("""
-            def __set_{x}(self, value):
+            def __set_{x}(self, value, conv=conv):
                 self._ptr.{x} = conv.from_python(value)
         """.format(x=fieldname))
         fn = compile_def(src, conv=conv)
         setattr(cls, fn.__name__, fn)
         return fn
-
