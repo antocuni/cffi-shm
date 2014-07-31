@@ -113,9 +113,12 @@ class StructDecorator(object):
         def __hash__(self):
             return hash(self._key())
         def __eq__(self, other):
-            return self._key() == other._key()
+            return isinstance(other, cls) and self._key() == other._key()
+        def __ne__(self, other):
+            return not self == other
         cls.__hash__ = __hash__
         cls.__eq__ = __eq__
+        cls.__ne__ = __ne__
 
     def make_fieldspec(self, cls):
         from shm.libcfu import cfuffi, cfuhash, FieldSpec

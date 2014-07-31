@@ -70,18 +70,6 @@ def test_override_init():
     assert p.x == 1
     assert p.y == 2
 
-def test_override___eq__():
-    pyffi = PyFFI(ffi)
-    class Point(pyffi.struct('Point')):
-        def __eq__(self, other):
-            return type(other) is int and other == 42
-    #
-    p1 = Point(x=1, y=2)
-    p2 = Point(x=1, y=2)
-    assert p1 == 42
-    assert not p1 == p2
-    
-
 def test_nested_struct():
     pyffi = PyFFI(ffi)
 
@@ -102,9 +90,30 @@ def test_equality_hash():
     Point = pyffi.struct('Point')
     p1 = Point(1, 2)
     p2 = Point(1, 2)
+    p3 = Point(3, 4)
     assert hash(p1) == hash(p2)
     assert p1 == p2
-    assert p1 != None # check that the exception is not propagated outside __eq__
+    assert not p1 == None
+    assert not p1 == p3
+    #
+    assert p1 != None
+    assert p1 != p3
+    assert not p1 != p2
+
+    
+
+def test_override___eq__():
+    pyffi = PyFFI(ffi)
+    class Point(pyffi.struct('Point')):
+        def __eq__(self, other):
+            return type(other) is int and other == 42
+    #
+    p1 = Point(x=1, y=2)
+    p2 = Point(x=1, y=2)
+    assert p1 == 42
+    assert not p1 == p2
+    
+
 
 def check_fieldspec(spec, kind, offset, size, fieldspec=None):
     assert kind is None or spec.kind == kind
