@@ -11,10 +11,10 @@ def make_struct(pyffi, ctype, immutable=True, converters=None):
         __slots__ = ()
         class __metaclass__(type):
             def __init__(cls, name, bases, dic):
-                cls = decorate(cls)
                 pyffi.register(struct_ctype, cls)
                 pyffi.register(ptr_ctype, cls)
 
+    MyStruct = decorate(MyStruct)
     MyStruct.__name__ = struct_ctype.cname
     return MyStruct
 

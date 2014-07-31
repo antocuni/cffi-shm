@@ -112,7 +112,18 @@ def test_override___eq__():
     p2 = Point(x=1, y=2)
     assert p1 == 42
     assert not p1 == p2
-    
+
+def test_override___eq___in_base_class():
+    pyffi = PyFFI(ffi)
+    class BasePoint(pyffi.struct('Point')):
+        def __eq__(self, other):
+            return type(other) is int and other == 42
+    class Point(BasePoint):
+        pass
+    p1 = Point(x=1, y=2)
+    p2 = Point(x=1, y=2)
+    assert p1 == 42
+    assert not p1 == p2
 
 
 def check_fieldspec(spec, kind, offset, size, fieldspec=None):
