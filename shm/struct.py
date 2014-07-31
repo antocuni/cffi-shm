@@ -105,6 +105,11 @@ class StructDecorator(object):
         """ % items)
         cls._key = compile_def(src)
 
+        # add default __eq__ and __hash__ only if they are not already defined
+        # Note that if the user define only one of those, we assume that he
+        # knows what he's doing, and avoid definint the other
+        if '__eq__' in cls.__dict__ or '__hash__' in cls.__dict__:
+            return
         def __hash__(self):
             return hash(self._key())
         def __eq__(self, other):
