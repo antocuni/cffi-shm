@@ -106,6 +106,14 @@ def test_register_roots():
     assert f.i == 3
     py.test.raises(ValueError, "roots._add(ptr, 'g')")
 
+def test_GcRootCollection_from_pointer():
+	roots = gclib.GcRootCollection(4)
+	ptr = roots.as_cdata()
+	roots2 = gclib.GcRootCollection.from_pointer(ptr)
+	assert roots2.gcroots == ptr
+	assert roots2.mem == roots.mem
+	assert len(roots.extrainfo) == 4
+	
 
 def test_root_keepalive():
     import gc

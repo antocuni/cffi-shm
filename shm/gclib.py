@@ -58,6 +58,12 @@ gcffi.cdef("""
         void* rwmem;
         size_t rwmem_size;
     } gclib_info_t;
+
+    typedef struct {
+        void** mem;
+        size_t mem_size;
+        size_t i;
+    } gcroots_t;
 """)
 
 ## import distutils.log
@@ -86,6 +92,11 @@ lib = gcffi.verify(
         void* rwmem;
         size_t rwmem_size;
     } gclib_info_t;
+    typedef struct {
+        void** mem;
+        size_t mem_size;
+        size_t i;
+    } gcroots_t;
 
     """,
     include_dirs = ['GC'],
@@ -248,24 +259,41 @@ class GcRootCollection(object):
     For now we allow only a fixed number of roots. In the future, we can make
     it smarter to grow/shrink automatically.
     """
-    def __init__(self, maxroots):
-        self.n = 0
-        self.maxroots = maxroots
-        self.mem = gcffi.new('void*[]', self.maxroots)
-        self.extrainfo = [None] * self.maxroots
-        size = self.maxroots * gcffi.sizeof('void*')
+    def __init__(self, maxroots, use_shm=False):
+        if use_shm:
+            self.mem = new_array(gcffi, 'void*', maxroots, rw=True)
+            self.gcroots = new(gcffi, 'gcroots_t*', rw=True)
+        else:
+            self.mem = gcffi.new('void*[]', maxroots)
+            self.gcroots = gcffi.new('gcroots_t*')
+        self.gcroots.i = 0
+        self.gcroots.mem_size = maxroots
+        self.gcroots.mem = self.mem
+        self.extrainfo = [None] * maxroots
+        size = maxroots * gcffi.sizeof('void*')
         lib.GC_root(self.mem, size)
 
+    @classmethod
+    def from_pointer(cls, ptr):
+        self = cls.__new__(cls)
+        self.gcroots = gcffi.cast('gcroots_t*', ptr)
+        self.mem = self.gcroots.mem
+        self.extrainfo = [None] * self.gcroots.mem_size
+        return self
+
+    def as_cdata(self):
+        return self.gcroots
+
     def _add(self, ptr, einfo):
-        i = self.n
+        i = self.gcroots.i
         while True:
             if self.mem[i] == gcffi.NULL:
                 break
-            i = (i+1) % self.maxroots
-            if i == self.n:
+            i = (i+1) % self.gcroots.mem_size
+            if i == self.gcroots.i:
                 raise ValueError, 'No more space for GC roots'
 
-        self.n = i
+        self.gcroots.i = i
         return GcRoot(self, i, ptr, einfo)
 
     def add(self, ffi, ptr, einfo='<unknown>'):
