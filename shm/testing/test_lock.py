@@ -24,7 +24,7 @@ def test_simple_lock(tmpdir):
         lock.release()
         diff = abs(b-a)
         # we check that the lock has been owned by ~0.5 seconds
-        assert 0.4 < diff < 0.5
+        assert 0.3 < diff < 0.5
 
     def acquire_and_release(lock):
         import sys
