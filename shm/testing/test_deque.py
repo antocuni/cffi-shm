@@ -25,3 +25,24 @@ def test_popleft(pyffi):
     assert d[-3] == 2
     py.test.raises(IndexError, "d[3]")
     py.test.raises(IndexError, "d[-4]")
+
+def test_popleft_empty(pyffi):
+    DT = pyffi.deque('long')
+    d = DT()
+    py.test.raises(IndexError, "d.popleft()")
+    d.append(42)
+    assert d.popleft() == 42
+    py.test.raises(IndexError, "d.popleft()")
+
+
+def test_circular_buffer(pyffi):
+    DT = pyffi.deque('long')
+    d = DT([1, 2, 3, 4])
+    assert d.lst.size == 4 # completely full
+    d.popleft()
+    assert d.lst.offset == 1
+    d.append(5)
+    assert d.lst.size == 4
+    assert d[0] == 2
+    assert d[3] == 5
+    assert list(d.typeditems[0:4]) == [5, 2, 3, 4]

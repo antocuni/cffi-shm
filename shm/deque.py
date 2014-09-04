@@ -17,14 +17,18 @@ class Deque(FixedSizeList):
 
     def _getindex(self, i):
         i = FixedSizeList._getindex(self, i)
-        return i + self.lst.offset
+        i += self.lst.offset
+        if i >= self.lst.length:
+            i -= self.lst.length
+        return i
 
     def append(self, item):
         lst = self.lst
         if lst.size <= lst.length:
             self._grow(lst.size*2)
         n = lst.length
-        lst.length = n+1
+        lst.length += 1
+        n = self._getindex(n)
         self._setitem(n, item)
 
     def popleft(self):
