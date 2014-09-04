@@ -42,6 +42,20 @@ class PyFFI(object):
             self.register(cname+'*', LT)
         return LT
 
+    def deque(self, t, cname=None, **kwds):
+        """
+        Create a deque type whose items are of type ``t``. If ``cname`` is
+        given, the list type is also registered as an opaque C typedef in the
+        ffi, so that it can be used to e.g. declare fields in subsequent
+        struct definitions.
+        """
+        from shm.deque import DequeType
+        DT = DequeType(self, t, **kwds)
+        if cname:
+            self._new_opaque_type(cname)
+            self.register(cname+'*', DT)
+        return DT
+
     def dict(self, keytype, valuetype, cname=None, **kwds):
         """
         Create a dict type for the given ``keytype`` and ``valuetype``. If

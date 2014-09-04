@@ -11,6 +11,7 @@ listffi.cdef("""
     typedef struct {
         long size;   // number of allocated items
         long length; // number of actually used items
+        long offset;  // this is used only by deque
         void* items;
     } List;
 """)
@@ -46,6 +47,7 @@ class ListType(AbstractGenericType):
         # note that we are deliberatly ignoring the field 'size': we do not
         # care how many items we have preallocated for doing comparisons
         spec.add('length', cfuhash.primitive, listffi.sizeof('long'))
+        spec.add('offset', cfuhash.primitive, listffi.sizeof('long'))
         spec.add('items', cfuhash.array, self.ffi.sizeof(self.itemtype),
                  length_offset = listffi.offsetof('List', 'length'),
                  fieldspec = itemspec)
@@ -62,6 +64,7 @@ class ListType(AbstractGenericType):
             ptr.items = sharedmem.new_array(self.ffi, self.itemtype, 2)
             ptr.size = 2
             ptr.length = 0
+            ptr.offset = 0
         lst = self.listclass.from_pointer(self, ptr)
         lst._setcontent(items)
         return lst
@@ -149,7 +152,8 @@ class FixedSizeList(ImmutableList):
 
 class ResizableList(FixedSizeList):
     """
-    WARNING: ListInstance is not thread-safe!
+    WARNING: ResizableList is not thread-safe, so it needs to be protected by
+    a lock.
     """
 
     def append(self, item):
