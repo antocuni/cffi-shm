@@ -2,6 +2,7 @@
 Implement a shm deque on top of a shm list.
 """
 
+from shm.sharedmem import sharedmem
 from shm.list import ListType, FixedSizeList
 
 class DequeType(ListType):
@@ -18,9 +19,26 @@ class Deque(FixedSizeList):
     def _getindex(self, i):
         i = FixedSizeList._getindex(self, i)
         i += self.lst.offset
-        if i >= self.lst.length:
-            i -= self.lst.length
+        if i >= self.lst.size:
+            i -= self.lst.size
         return i
+
+    def _grow(self, newsize):
+        t = self.listtype
+        lst = self.lst
+        oldsize = lst.size
+        if newsize <= lst.size:
+            return
+        newitems = sharedmem.new_array(t.ffi, t.itemtype, newsize)
+        i = lst.offset
+        for j in xrange(lst.length):
+            newitems[j] = self.typeditems[i]
+            i += 1
+            if i == oldsize:
+                i = 0
+        lst.items = newitems
+        lst.size = newsize
+        lst.offset = 0
 
     def append(self, item):
         lst = self.lst

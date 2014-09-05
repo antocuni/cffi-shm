@@ -46,3 +46,28 @@ def test_circular_buffer(pyffi):
     assert d[0] == 2
     assert d[3] == 5
     assert list(d.typeditems[0:4]) == [5, 2, 3, 4]
+
+def test_growing(pyffi):
+    DT = pyffi.deque('long')
+    #
+    # start with a buffer of 4 items and offset==1
+    d = DT([100])
+    d._grow(4)
+    d.popleft()
+    assert d.lst.offset == 1
+    assert d.lst.size == 4
+    assert d.lst.length == 0
+    #
+    # fill the circular buffer
+    d.append(1)
+    d.append(2)
+    d.append(3)
+    d.append(4)
+    assert list(d.typeditems[0:4]) == [4, 1, 2, 3]
+    #
+    # now grow, and reshuffle the buffer
+    d.append(5)
+    assert list(d.typeditems[0:5]) == [1, 2, 3, 4, 5]
+    assert d.lst.offset == 0
+    assert len(d) == 5
+    
