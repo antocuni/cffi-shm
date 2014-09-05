@@ -1,5 +1,6 @@
 """
 Implement a shm deque on top of a shm list.
+So far, only .append() and .popleft() are implemented.
 """
 
 from shm.sharedmem import sharedmem
