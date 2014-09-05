@@ -85,3 +85,13 @@ def test___iter__(pyffi):
     d.append(5)
     d.append(6)
     assert list(d) == [2, 3, 4, 5, 6]
+
+def test___setitem__(pyffi):
+    DT = pyffi.deque('long')
+    #
+    # start with a buffer of 4 items and offset==1
+    d = DT([1, 2, 3])
+    assert d.popleft() == 1
+    d[0] = 20
+    d[1] = 30
+    assert list(d) == [20, 30]
