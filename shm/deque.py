@@ -56,3 +56,9 @@ class Deque(FixedSizeList):
         self.lst.offset += 1
         self.lst.length -= 1
         return res
+
+    def __iter__(self):
+        i = 0
+        while i < self.lst.length:
+            yield self[i]
+            i += 1

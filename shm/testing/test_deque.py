@@ -71,3 +71,16 @@ def test_growing(pyffi):
     assert d.lst.offset == 0
     assert len(d) == 5
     
+def test___iter__(pyffi):
+    DT = pyffi.deque('long')
+    #
+    # start with a buffer of 4 items and offset==1
+    d = DT([1, 2, 3])
+    assert list(d) == [1, 2, 3]
+    d.append(4)
+    assert list(d) == [1, 2, 3, 4]
+    d.popleft()
+    assert list(d) == [2, 3, 4]
+    d.append(5)
+    d.append(6)
+    assert list(d) == [2, 3, 4, 5, 6]
