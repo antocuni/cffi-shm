@@ -95,3 +95,13 @@ def test___setitem__(pyffi):
     d[0] = 20
     d[1] = 30
     assert list(d) == [20, 30]
+
+def test_slice(pyffi):
+    DT = pyffi.deque('long')
+    #
+    # start with a buffer of 4 items and offset==1
+    d = DT([1, 2, 3])
+    assert d.popleft() == 1
+    d.append(4)
+    assert list(d[0:4]) == [2, 3, 4]
+
