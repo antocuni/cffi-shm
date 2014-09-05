@@ -3,7 +3,7 @@ Implement a shm deque on top of a shm list.
 """
 
 from shm.sharedmem import sharedmem
-from shm.list import ListType, FixedSizeList
+from shm.list import ListType, ResizableList
 
 class DequeType(ListType):
 
@@ -14,10 +14,9 @@ class DequeType(ListType):
         return '<shm type deque [%s]>' % self.itemtype
 
 
-class Deque(FixedSizeList):
+class Deque(ResizableList):
 
-    def _getindex(self, i):
-        i = FixedSizeList._getindex(self, i)
+    def _itemindex(self, i):
         i += self.lst.offset
         if i >= self.lst.size:
             i -= self.lst.size
@@ -40,25 +39,12 @@ class Deque(FixedSizeList):
         lst.size = newsize
         lst.offset = 0
 
-    def append(self, item):
-        lst = self.lst
-        if lst.size <= lst.length:
-            self._grow(lst.size*2)
-        n = lst.length
-        lst.length += 1
-        n = self._getindex(n)
-        self._setitem(n, item)
-
     def popleft(self):
-        i = self._getindex(0)
+        if len(self) == 0:
+            raise IndexError
+        i = self._itemindex(0)
         res = self._getitem(i)
         #self._setitem(i, NULL)
         self.lst.offset += 1
         self.lst.length -= 1
         return res
-
-    def __iter__(self):
-        i = 0
-        while i < self.lst.length:
-            yield self[i]
-            i += 1

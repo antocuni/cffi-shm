@@ -119,11 +119,22 @@ class ImmutableList(object):
             for i, item in enumerate(items):
                 self._setitem(i, item)
 
+    def _itemindex(self, i):
+        """
+        Return the index in the array for the i-th element. Always ``i`` for
+        lists, overridden by Deque. No bound check.
+        """
+        return i
+
     def _getindex(self, i):
+        """
+        Compute the index for the i-th element. This handles negative indexes, and
+        raises IndexError in case of out-of-bound.
+        """
         if i < 0:
             i += self.lst.length
         if 0 <= i < self.lst.length:
-            return i
+            return self._itemindex(i)
         raise IndexError
     
     def __len__(self):
@@ -132,6 +143,7 @@ class ImmutableList(object):
     def __getitem__(self, i):
         if isinstance(i, slice):
             idx = xrange(*i.indices(len(self)))
+            # XXX
             return [self._getitem(j) for j in idx]
         i = self._getindex(i)
         return self._getitem(i)
@@ -139,7 +151,7 @@ class ImmutableList(object):
     def __iter__(self):
         i = 0
         while i < self.lst.length:
-            yield self._getitem(i)
+            yield self._getitem(self._itemindex(i))
             i += 1
 
 
@@ -161,5 +173,6 @@ class ResizableList(FixedSizeList):
         if lst.size <= lst.length:
             self._grow(lst.size*2)
         n = lst.length
-        lst.length = n+1
+        lst.length += 1
+        n = self._itemindex(n)
         self._setitem(n, item)

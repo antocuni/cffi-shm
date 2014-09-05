@@ -23,6 +23,7 @@ def test_popleft(pyffi):
     assert d[-1] == 4
     assert d[-2] == 3
     assert d[-3] == 2
+    assert d.popleft() == 2
     py.test.raises(IndexError, "d[3]")
     py.test.raises(IndexError, "d[-4]")
 
@@ -39,7 +40,7 @@ def test_circular_buffer(pyffi):
     DT = pyffi.deque('long')
     d = DT([1, 2, 3, 4])
     assert d.lst.size == 4 # completely full
-    d.popleft()
+    assert d.popleft() == 1
     assert d.lst.offset == 1
     d.append(5)
     assert d.lst.size == 4
@@ -53,7 +54,7 @@ def test_growing(pyffi):
     # start with a buffer of 4 items and offset==1
     d = DT([100])
     d._grow(4)
-    d.popleft()
+    assert d.popleft() == 100
     assert d.lst.offset == 1
     assert d.lst.size == 4
     assert d.lst.length == 0
@@ -79,7 +80,7 @@ def test___iter__(pyffi):
     assert list(d) == [1, 2, 3]
     d.append(4)
     assert list(d) == [1, 2, 3, 4]
-    d.popleft()
+    assert d.popleft() == 1
     assert list(d) == [2, 3, 4]
     d.append(5)
     d.append(6)
