@@ -300,6 +300,15 @@ class GcRootCollection(object):
         root = self._add(ptr, einfo)
         return ffi.gc(ptr, root.clear)
 
+    def print_extrainfo(self):
+        from collections import Counter
+        total_roots = len([x for x in self.mem if x != gcffi.NULL])
+        d = Counter()
+        for info in self.extrainfo:
+            d[info] += 1
+        print 'Total number of roots: %d' % total_roots
+        for info, n in d.most_common():
+            print '%40s: %d' % (info, n)
 
 class GcRoot(object):
     def __init__(self, collection, i, ptr, einfo):
@@ -312,7 +321,7 @@ class GcRoot(object):
         self.collection.mem[self.i] = gcffi.NULL
         self.collection.extrainfo[self.i] = None
 
-roots = GcRootCollection(2**18)
+roots = GcRootCollection(2**19)
 
 
 class Disabled(object):
