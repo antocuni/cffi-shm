@@ -223,6 +223,26 @@ class LongOrNone(AbstractConverter):
             obj = self.sentinel
         return obj
 
+class BoolOrNone(AbstractConverter):
+    """
+    Convert Python bools to and from C "signed char".
+    True is converted to 1, False to 0 and None to -1.
+
+    This converter is never used by default, it must be explicitly passed as a
+    custom converter.
+    """
+
+    def to_python_impl(self, cdata):
+        value = int(cdata)
+        if value == -1:
+            return None
+        return bool(value)
+
+    def from_python(self, obj, ensure_shm=True):
+        if obj is None:
+            obj = -1
+        return obj
+
 
 class DateTimeConverter(AbstractConverter):
     """

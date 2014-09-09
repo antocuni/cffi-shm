@@ -121,6 +121,17 @@ def test_LongOrNone():
     assert conv.from_python(42) == 42
     assert conv.from_python(None) == -sys.maxint-1
 
+def test_BoolOrNone():
+    from shm.converter import BoolOrNone
+    conv = BoolOrNone(None, None)
+    assert conv.to_python(0) is False
+    assert conv.to_python(1) is True
+    assert conv.to_python(-1) is None
+    #
+    assert conv.from_python(True) == 1
+    assert conv.from_python(False) == 0
+    assert conv.from_python(None) == -1
+
 def test_DateTimeConverter():
     from datetime import datetime
     from shm.converter import DateTimeConverter
