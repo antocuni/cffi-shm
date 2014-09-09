@@ -2,7 +2,7 @@ import cffi
 import _cffi_backend
 from shm.sharedmem import sharedmem
 from shm.converter import Dummy
-from shm.util import ctype_pointer_to, cffi_typeof
+from shm.util import ctype_pointer_to, cffi_typeof, cffi_is_pointer
 from shm.pyffi import AbstractGenericType
 
 listffi = cffi.FFI()
@@ -23,6 +23,7 @@ class ListType(AbstractGenericType):
         self.ffi = pyffi.ffi
         self.itemtype = itemtype
         self.itemtype_ptr = ctype_pointer_to(self.ffi, itemtype)
+        self.itemtype_is_pointer = cffi_is_pointer(self.ffi, itemtype)
         self.__immutable__ = immutable
         if immutable:
             defaultclass = ImmutableList

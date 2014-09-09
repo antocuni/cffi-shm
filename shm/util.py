@@ -16,6 +16,10 @@ def cffi_is_primitive(ffi, t):
     ctype = cffi_typeof(ffi, t)
     return ctype.kind == 'primitive'
 
+def cffi_is_pointer(ffi, t):
+    ctype = cffi_typeof(ffi, t)
+    return ctype.kind == 'pointer'
+
 def cffi_is_double(ffi, t):
     ctype = cffi_typeof(ffi, t)
     return ctype == ffi.typeof('double')

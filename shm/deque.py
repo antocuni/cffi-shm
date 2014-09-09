@@ -45,7 +45,8 @@ class Deque(ResizableList):
             raise IndexError
         i = self._itemindex(0)
         res = self._getitem(i)
-        #self._setitem(i, NULL)
+        if self.listtype.itemtype_is_pointer:
+            self.typeditems[i] = self.listtype.ffi.NULL
         self.lst.offset += 1
         self.lst.length -= 1
         return res

@@ -105,3 +105,11 @@ def test_slice(pyffi):
     d.append(4)
     assert list(d[0:4]) == [2, 3, 4]
 
+def test_null_on_delete(pyffi):
+    DT = pyffi.deque('const char*')
+    d = DT()
+    d.append('hello')
+    d.popleft()
+    d.append('world')
+    d.popleft()
+    assert list(d.typeditems[0:2]) == [pyffi.ffi.NULL, pyffi.ffi.NULL]
