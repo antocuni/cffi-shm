@@ -35,7 +35,6 @@ def test_popleft_empty(pyffi):
     assert d.popleft() == 42
     py.test.raises(IndexError, "d.popleft()")
 
-
 def test_circular_buffer(pyffi):
     DT = pyffi.deque('long')
     d = DT([1, 2, 3, 4])
@@ -47,6 +46,19 @@ def test_circular_buffer(pyffi):
     assert d[0] == 2
     assert d[3] == 5
     assert list(d.typeditems[0:4]) == [5, 2, 3, 4]
+
+def test_popleft_circular(pyffi):
+    DT = pyffi.deque('long')
+    d = DT([10, 20])
+    assert d.lst.size == 2
+    assert d.lst.offset == 0
+    assert d.popleft() == 10
+    assert d.lst.offset == 1
+    assert d.popleft() == 20
+    assert d.lst.offset == 0
+    d.append(30)
+    assert d.typeditems[0] == 30
+
 
 def test_growing(pyffi):
     DT = pyffi.deque('long')

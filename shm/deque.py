@@ -47,6 +47,6 @@ class Deque(ResizableList):
         res = self._getitem(i)
         if self.listtype.itemtype_is_pointer:
             self.typeditems[i] = self.listtype.ffi.NULL
-        self.lst.offset += 1
+        self.lst.offset = (self.lst.offset+1) % self.lst.size
         self.lst.length -= 1
         return res
