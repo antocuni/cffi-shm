@@ -1,0 +1,10 @@
+*.pyc
+*.o
+*.so
+*.mps
+__pycache__
+*~
+\.\#*
+\#*\#
+build
+gc.lds
