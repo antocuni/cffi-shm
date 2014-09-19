@@ -125,3 +125,36 @@ def test_null_on_delete(pyffi):
     d.append('world')
     d.popleft()
     assert list(d.typeditems[0:2]) == [pyffi.ffi.NULL, pyffi.ffi.NULL]
+
+def test_random(pyffi):
+    from collections import deque
+    import random
+    import time
+    seed = time.time
+    print 'seed =', seed
+    random.seed(seed)
+    #
+    DT = pyffi.deque('long')
+    def tryit(size):
+        ops = ['append']*(size*2) + ['popleft']*size
+        random.shuffle(ops)
+        shm_d = DT()
+        py_d = deque()
+        for i, op in enumerate(ops):
+            if op == 'append':
+                shm_d.append(i)
+                py_d.append(i)
+            elif op == 'popleft':
+                if py_d:
+                    x = shm_d.popleft()
+                    y = py_d.popleft()
+                    assert x == y
+                else:
+                    assert not shm_d
+            else:
+                assert False, 'unknown op: %s' % op
+        assert list(shm_d) == list(py_d)
+
+    for i in range(100):
+        for size in [8, 20, 40]:
+            tryit(size)
