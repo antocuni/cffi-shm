@@ -302,7 +302,8 @@ class GcRootCollection(object):
 
     def print_extrainfo(self):
         from collections import Counter
-        total_roots = len([x for x in self.mem if x != gcffi.NULL])
+        mem_size = self.gcroots.mem_size
+        total_roots = len([x for x in self.mem[0:mem_size] if x != gcffi.NULL])
         d = Counter()
         for info in self.extrainfo:
             d[info] += 1
