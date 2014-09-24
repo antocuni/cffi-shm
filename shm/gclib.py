@@ -321,7 +321,7 @@ class GcRoot(object):
         self.collection.mem[self.i] = gcffi.NULL
         self.collection.extrainfo[self.i] = None
 
-roots = GcRootCollection(2**19)
+roots = GcRootCollection(2**21)
 
 
 class Disabled(object):
