@@ -18,7 +18,10 @@ class DequeType(ListType):
 class Deque(ResizableList):
 
     def _itemindex(self, i):
-        return (i+self.lst.offset) % self.lst.size
+        i += self.lst.offset
+        if i >= self.lst.size:
+            i -= self.lst.size
+        return i
 
     def _grow(self, newsize):
         t = self.listtype
@@ -44,6 +47,10 @@ class Deque(ResizableList):
         res = self._getitem(i)
         if self.listtype.itemtype_is_pointer:
             self.typeditems[i] = self.listtype.ffi.NULL
-        self.lst.offset = (self.lst.offset+1) % self.lst.size
+        #
+        offset = self.lst.offset + 1
+        if offset >= self.lst.size:
+            offset -= self.lst.size
+        self.lst.offset = offset
         self.lst.length -= 1
         return res
