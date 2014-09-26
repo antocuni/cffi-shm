@@ -148,11 +148,8 @@ class ImmutableList(object):
         i = self._getindex(i)
         return self._getitem(i)
 
-    def __iter__(self):
-        i = 0
-        while i < self.lst.length:
-            yield self._getitem(self._itemindex(i))
-            i += 1
+    # we do not define an __iter__: instead, we rely on the implicit one which
+    # python derives from __getitem__
 
 
 class FixedSizeList(ImmutableList):
