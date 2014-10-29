@@ -39,6 +39,10 @@ class ShmRWLock(object):
             pthread.checked.mutex_destroy(self.rwlock.wr_mutex)
             pthread.checked.mutex_destroy(self.rwlock.rdcount_mutex)
 
+    @property
+    def readers_count(self):
+        return self.rwlock.rdcount
+
     def wr_acquire(self):
         ret = pthread.mutex_lock(self.rwlock.wr_mutex)
         assert ret == 0 # XXX, handle EOWNERDEAD
