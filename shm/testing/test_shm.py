@@ -7,31 +7,10 @@ from shm.sharedmem import sharedmem
 from shm.list import ListType
 from shm.dict import DictType
 from shm.pyffi import PyFFI
+from shm.testing.util import exec_child
 
 PATH = '/cffi-shm-testing'
 sharedmem.init(PATH)
-
-def exec_child(tmpdir, fn, *args):
-    rootdir = py.path.local(shm.__file__).dirpath('..')
-    
-    filename = tmpdir.join(fn.__name__ + '.py')
-    src = py.code.Source(fn)
-    arglist = ', '.join(map(repr, args))
-    call = '%s(%s)' % (fn.__name__, arglist)
-    with filename.open('w') as f:
-        f.write('import sys\n')
-        f.write('sys.path.append(%s)\n' % repr(str(rootdir)))
-        f.write(str(src))
-        f.write('\n')
-        f.write(call)
-    #
-    cmd = "%s %s" % (sys.executable, filename)
-    #cmd = "gdb --args %s" % cmd
-    ret = os.system(cmd)
-    if ret != 0:
-        raise ValueError("The child returned non-0 status")
-    return True
-
 
 def test_exec_child(tmpdir):
     def fn(a, b):
