@@ -8,7 +8,7 @@ import subprocess
 def _prepare_child(tmpdir, fn, *args):
     rootdir = py.path.local(shm.__file__).dirpath('..')
     
-    filename = tmpdir.join(fn.__name__ + '.py')
+    filename = tmpdir.join('%s.%r.py' % (fn.__name__, time.time()))
     src = py.code.Source(fn)
     arglist = ', '.join(map(repr, args))
     call = '%s(%s)' % (fn.__name__, arglist)
