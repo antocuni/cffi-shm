@@ -2,7 +2,7 @@ import time
 import cffi
 from shm.sharedmem import sharedmem
 from shm.rwlock import ShmRWLock
-from shm.testing.util import SubProcess
+from shm.testing.util import SubProcess, assert_elapsed_time
 
 PATH = '/cffi-shm-testing'
 sharedmem.init(PATH)
@@ -95,3 +95,52 @@ def test_rwlock_write_read_read(tmpdir):
         p.background(tmpdir, child, PATH, lock_addr)
         time.sleep(0.5)
         lock.wr_release()
+
+
+def test_rwlock_starvation(tmpdir):
+    def child(path, lock_addr, initial_delay, sleep_time, pname):
+        import time
+        from shm.sharedmem import sharedmem
+        from shm.rwlock import ShmRWLock
+        from shm.testing.util import assert_elapsed_time
+        #
+        print
+        sharedmem.open_readonly(path)
+        lock = ShmRWLock.from_pointer(lock_addr)
+        print pname, 'a'
+        time.sleep(initial_delay)
+        print pname, 'b'
+        # acquire a read lock and sleep for n seconds
+        lock.rd_acquire()
+        print pname, 'c'
+        time.sleep(sleep_time)
+        print pname, 'd'
+        lock.rd_release()
+        print pname, 'returning'
+
+    ffi = cffi.FFI()
+    lock = ShmRWLock()
+    lock_addr = int(ffi.cast('long', lock.as_cdata()))
+
+    assert lock.readers_count == 0
+    with SubProcess() as p:
+        # we want to simulate this case:
+        # 1) P1 acquires the READ LOCK
+        # 2) P3 tries to acquire the WRITE LOCK and it blocks
+        # 3) P2 acquires the READ LOCK
+        # 4) P1 releases the READ LOCK; P3 still blocked
+        # 5) P2 releases the READ LOCK
+        # 6) P3 finally acquires the WRITE LOCK
+        #
+        # Note that this is technically starvation (because P3 tries to
+        # acquire the lock BEFORE). However, RWLock is written explictly NOT
+        # to prevent starvation.
+        p.background(tmpdir, child, PATH, lock_addr, 0, 5, 'P1')   # P1
+        p.background(tmpdir, child, PATH, lock_addr, 1, 5, 'P2') # P2
+        time.sleep(0.2) # give the child processes enough time to start
+        with assert_elapsed_time(3, 5):                    # P3
+            print 'P3: a'
+            lock.wr_acquire()
+            print 'P3: b'
+            lock.wr_release()
+    print 'EXITING'
