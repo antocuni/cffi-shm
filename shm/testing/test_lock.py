@@ -9,24 +9,20 @@ sharedmem.init(PATH)
 
 def test_simple_lock(tmpdir):
     def child(path, lock_addr):
-        import time
         from shm.sharedmem import sharedmem
         from shm.lock import ShmLock
+        from shm.testing.util import assert_elapsed_time
         #
         sharedmem.open_readonly(path)
         lock = ShmLock.from_pointer(lock_addr)
-        a = time.time()
-        lock.acquire() # the lock is owned by the parent for 0.5 seconds
-        b = time.time()
-        lock.release()
-        diff = abs(b-a)
-        # we check that the lock has been owned by ~0.5 seconds
-        assert 0.3 < diff < 0.5
+        with assert_elapsed_time(0.3, 0.5):
+            # the lock is owned by the parent for 0.5 seconds
+            lock.acquire()
+            lock.release()
 
     ffi = cffi.FFI()
     lock = ShmLock()
     lock_addr = int(ffi.cast('long', lock.as_cdata()))
-
     with SubProcess() as p:
         p.background(tmpdir, child, PATH, lock_addr)
         lock.acquire()

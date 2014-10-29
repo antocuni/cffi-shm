@@ -1,6 +1,7 @@
 import py
 import sys
 import os
+import time
 import shm
 import subprocess
 
@@ -50,3 +51,17 @@ class SubProcess(object):
             for p in self.plist:
                 ret = p.wait()
                 assert ret == 0, 'child returned non-0 status'
+
+
+class assert_elapsed_time(object):
+    def __init__(self, min, max):
+        self.min = min
+        self.max = max
+
+    def __enter__(self):
+        self.start = time.time()
+
+    def __exit__(self, etype, evalue, tb):
+        if etype is None:
+            diff = time.time() - self.start
+            assert self.min <= diff <= self.max
