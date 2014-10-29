@@ -3,23 +3,24 @@ import errno
 from shm.pthread import pthread
 from shm.sharedmem import sharedmem
 
+def _new_mutex():
+	attr = pthread.ffi.new('pthread_mutexattr_t*')
+	pthread.checked.mutexattr_init(attr)
+	pthread.checked.mutexattr_setpshared(attr, pthread.PROCESS_SHARED)
+	pthread.checked.mutexattr_setrobust_np(attr, pthread.MUTEX_ROBUST_NP)
+	pthread.checked.mutexattr_settype(attr, pthread.MUTEX_RECURSIVE)
+	#
+	mutex = sharedmem.new(pthread.ffi, 'pthread_mutex_t*', rw=True)
+	pthread.checked.mutex_init(mutex, attr)
+	pthread.checked.mutexattr_destroy(attr)
+	return mutex
+
+
 class ShmLock(object):
 
     def __init__(self):
-        self.mutex = self._new_mutex()
+        self.mutex = _new_mutex()
         self.owning = True
-
-    def _new_mutex(self):
-        attr = pthread.ffi.new('pthread_mutexattr_t*')
-        pthread.checked.mutexattr_init(attr)
-        pthread.checked.mutexattr_setpshared(attr, pthread.PROCESS_SHARED)
-        pthread.checked.mutexattr_setrobust_np(attr, pthread.MUTEX_ROBUST_NP)
-        pthread.checked.mutexattr_settype(attr, pthread.MUTEX_RECURSIVE)
-        #
-        mutex = sharedmem.new(pthread.ffi, 'pthread_mutex_t*', rw=True)
-        pthread.checked.mutex_init(mutex, attr)
-        pthread.checked.mutexattr_destroy(attr)
-        return mutex
     
     @classmethod
     def from_pointer(cls, addr):
