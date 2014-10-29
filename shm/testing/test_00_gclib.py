@@ -53,7 +53,7 @@ def test_new_string():
     assert ptr[5] == '\0'
     assert ffi.string(ptr) == 'hello'
 
-def allocate_many(n=1024):
+def allocate_many(n=2048):
     a = gclib.total_collections()
     for i in range(n):
         p = gclib.new_array(ffi, 'Point', 1024, root=False)
