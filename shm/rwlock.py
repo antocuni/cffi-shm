@@ -21,6 +21,7 @@ class ShmRWLock(object):
         self.rwlock = sharedmem.new(ffi, 'rwlock_t*', rw=True)
         self.rwlock.wr_mutex = _new_mutex()
         self.rwlock.rdcount_mutex = _new_mutex()
+        self.rwlock.rdcount = 0
         self.owning = True
 
     @classmethod
@@ -48,3 +49,19 @@ class ShmRWLock(object):
         # immediately the other processes a chance to get the mutex
         time.sleep(0)
 
+    def rd_acquire(self):
+        ret = pthread.mutex_lock(self.rwlock.rdcount_mutex)
+        assert ret == 0, ret
+        self.rwlock.rdcount += 1
+        if self.rwlock.rdcount == 1:
+            ret = pthread.mutex_lock(self.rwlock.wr_mutex)
+            assert ret == 0
+        pthread.checked.mutex_unlock(self.rwlock.rdcount_mutex)
+
+    def rd_release(self):
+        ret = pthread.mutex_lock(self.rwlock.rdcount_mutex)
+        assert ret == 0
+        self.rwlock.rdcount -= 1
+        if self.rwlock.rdcount == 0:
+            pthread.checked.mutex_unlock(self.rwlock.wr_mutex)
+        pthread.checked.mutex_unlock(self.rwlock.rdcount_mutex)
