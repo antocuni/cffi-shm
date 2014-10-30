@@ -18,7 +18,6 @@ class Uninitialized_shm(object):
         self.__class__ = RO_shm
 
 
-
 class RW_shm(object):
 
     def init(self, path):

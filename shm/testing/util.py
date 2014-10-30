@@ -65,3 +65,10 @@ class assert_elapsed_time(object):
         if etype is None:
             diff = time.time() - self.start
             assert self.min <= diff <= self.max
+
+
+def tslog(tsref, s):
+    delta = time.time() - tsref
+    print '[%.5f] %s' % (delta, s)
+
+    

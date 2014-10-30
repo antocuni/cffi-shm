@@ -141,7 +141,8 @@ def allocate_gc_info(path):
         # changed and the GC allocates it in a new bucket. Simply change the
         # value of GC_INFO_ADDRESS accordingly
         raise ValueError("The gc_info struct was supposed to be allocated "
-                         "at the addres 0x%x" % GC_INFO_ADDRESS)
+                         "at the addres 0x%x, got 0x%x" %
+                         (GC_INFO_ADDRESS, gc_info_addr))
     gc_info.magic = GC_INFO_MAGIC
     gc_info.path = new_string(path, root=False)
     #
