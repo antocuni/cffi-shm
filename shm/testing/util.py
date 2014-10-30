@@ -64,7 +64,8 @@ class assert_elapsed_time(object):
     def __exit__(self, etype, evalue, tb):
         if etype is None:
             diff = time.time() - self.start
-            assert self.min <= diff <= self.max
+            msg = '%.4f <= %.4f <= %.4f' % (self.min, diff, self.max)
+            assert self.min <= diff <= self.max, msg
 
 
 def tslog(tsref, s):

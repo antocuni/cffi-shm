@@ -154,3 +154,41 @@ def test_rwlock_starvation(tmpdir):
             lock.wr_acquire()
             tslog(tsref, 'P3: got write lock, releasing it')
             lock.wr_release()
+
+def test_rwlock_recursive(tmpdir):
+    def child(path, lock_addr):
+        from shm.sharedmem import sharedmem
+        from shm.rwlock import ShmRWLock
+        from shm.testing.util import assert_elapsed_time
+        #
+        sharedmem.open_readonly(path)
+        lock = ShmRWLock.from_pointer(lock_addr)
+        with assert_elapsed_time(0.3, 0.5):
+            # we need to wait until the master releases it
+            lock.wr_acquire()
+            lock.wr_release()
+
+    ffi = cffi.FFI()
+    lock = ShmRWLock()
+    lock_addr = int(ffi.cast('long', lock.as_cdata()))
+
+    # first, we check that wr_lock is correctly recursive
+    with SubProcess() as p:
+        lock.wr_acquire() # 1st
+        lock.wr_acquire() # 2nd
+        #
+        lock.wr_release() # 2nd
+        p.background(tmpdir, child, PATH, lock_addr)
+        time.sleep(0.5)
+        lock.wr_release() # 1st
+
+    # then, we check that rd_lock is correctly recursive (note that the child
+    # still tries to get a wr_lock, else it wouldn't block)
+    with SubProcess() as p:
+        lock.rd_acquire() # 1st
+        lock.rd_acquire() # 2nd
+        #
+        lock.rd_release() # 2nd
+        p.background(tmpdir, child, PATH, lock_addr)
+        time.sleep(0.5)
+        lock.rd_release() # 1st
