@@ -150,7 +150,7 @@ class StructDecorator(object):
     def get_converter(self, fieldname, field):
         conv = self.converters.get(fieldname)
         if conv is not None:
-            return conv(self.pyffi, field.type)
+            return conv(self.ffi, field.type)
         return self.pyffi.get_converter(field.type)
 
     def getter(self, cls, fieldname, field):

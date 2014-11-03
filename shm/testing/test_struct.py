@@ -2,7 +2,7 @@ import py
 import cffi
 from shm.sharedmem import sharedmem
 from shm.pyffi import PyFFI
-from shm.converter import AbstractConverter
+from shm.converter import AbstractConverter, Primitive
 sharedmem.init('/cffi-shm-testing')
 
 ffi = cffi.FFI()
@@ -258,3 +258,15 @@ def test_custom_converter():
     assert obj._ptr.x == 21
     assert obj.x == 42
 
+def test_primitive_converter():
+    ffi = cffi.FFI()
+    ffi.cdef("""
+        typedef struct {
+            double x;
+        } MyStruct;
+    """)
+    pyffi = PyFFI(ffi)
+    converters = {'x': Primitive}
+    MyStruct = pyffi.struct('MyStruct', converters=converters)
+    obj = MyStruct(21)
+    assert obj.x == 21.0
